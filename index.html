@@ -142,10 +142,16 @@
           </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-          <a href="https://link.dkuaegis.org/easython-2025-form"
-            class="inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 px-8 py-4 text-lg !bg-white !text-[#1f1e33] !border-none !shadow-none hover:!bg-gray-100">바로
-            신청하기 →</a>
+          <button type="button" disabled
+            class="inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-300 px-8 py-4 text-lg bg-gray-600/60 text-gray-200 border border-gray-500 cursor-not-allowed opacity-80">
+            신청 마감
+          </button>
         </div>
+        <p class="mt-4 text-sm text-gray-300">
+          EasyThon 2025 참가 신청은 종료되었습니다.<br>궁금한 점은
+          <a href="https://instagram.com/dku_aegis" target="_blank" rel="noopener noreferrer"
+            class="text-white font-semibold hover:underline">인스타그램 @dku_aegis</a>로 문의해주세요.
+        </p>
         <div class="mt-20 animate-bounce">
           <a href="#about" class="inline-block" aria-label="scroll to about">
             <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -421,14 +427,14 @@
   </section>
 
   <!-- Floating Apply Button -->
-  <a id="floating-apply" href="https://link.dkuaegis.org/easython-2025-form" target="_blank" rel="noopener noreferrer"
+  <div id="floating-apply" role="status" aria-live="polite"
     class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-8 py-4 border-2 border-gray-800/50 rounded-full shadow-2xl transition-all duration-300 font-bold text-lg flex items-center gap-2 translate-y-20 opacity-0 pointer-events-none"
     style="background:#1f1e33;color:#F3F3F3;border-color:white;border-width: 1px;">
-    <span>신청하기</span>
+    <span>지원 마감</span>
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12l4 4 8-8" />
     </svg>
-  </a>
+  </div>
 
   <!-- Footer -->
   <footer class="bg-gray-900 text-gray-300 py-12">
@@ -486,10 +492,10 @@
     const onScroll = () => {
       if (!fab) return;
       if (window.scrollY > window.innerHeight * 0.8) {
-        fab.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+        fab.classList.remove('translate-y-20', 'opacity-0');
         fab.classList.add('translate-y-0', 'opacity-100');
       } else {
-        fab.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+        fab.classList.add('translate-y-20', 'opacity-0');
         fab.classList.remove('translate-y-0', 'opacity-100');
       }
     };
