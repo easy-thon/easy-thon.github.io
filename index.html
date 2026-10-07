@@ -95,7 +95,7 @@
         <div class="hidden md:flex items-center gap-10">
           <a href="#about" class="text-gray-300 hover:text-white font-medium">소개</a>
           <a href="#schedule" class="text-gray-300 hover:text-white font-medium">일정</a>
-          <a href="#prizes" class="text-gray-300 hover:text-white font-medium">상품</a>
+          <a href="#prizes" class="text-gray-300 hover:text-white font-medium">상금</a>
           <a href="#faq" class="text-gray-300 hover:text-white font-medium">FAQ</a>
         </div>
         <button id="navToggle" class="md:hidden p-2 text-gray-300 hover:text-white" aria-label="Toggle menu">
@@ -108,7 +108,7 @@
         <div class="py-4 space-y-2">
           <a href="#about" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">소개</a>
           <a href="#schedule" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">일정</a>
-          <a href="#prizes" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">상품</a>
+          <a href="#prizes" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">상금</a>
           <a href="#faq" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">FAQ</a>
         </div>
       </div>
@@ -327,66 +327,48 @@
   </section>
 
   <!-- Prizes -->
-  <section id="prizes" class="py-20 bg-gradient-to-br from-gray-900 to-gray-800">
-    <div class="container mx-auto px-4 max-w-6xl">
-      <div class="mb-12 text-center">
-        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-          Prizes</h2>
+  <section id="prizes" class="relative py-20 bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+      <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[36rem] h-[36rem] bg-yellow-400/10 rounded-full blur-3xl"></div>
+    </div>
+    <div class="relative container mx-auto px-4 max-w-5xl">
+      <div class="mb-16 text-center">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Prizes</h2>
+        <p class="text-lg text-gray-400 wb-keep">수상팀에게는 아래 상금이 지급됩니다</p>
       </div>
-      <div class="hidden md:flex items-end justify-center gap-4 md:gap-8 mb-16">
-        <div class="flex flex-col items-center w-64 gap-4">
-          <div class="bg-gray-800 rounded-lg shadow-2xl p-6 w-full transform hover:scale-105 transition-transform">
-            <div class="w-full h-40 mb-4 flex items-center justify-center text-6xl font-bold text-gray-600" aria-hidden="true">?</div>
-            <div class="text-xl font-semibold text-center text-white mb-2">미정</div>
-          </div>
-          <div
-            class="w-full bg-gradient-to-br from-gray-400 to-gray-500 h-24 rounded-lg flex items-center justify-center">
-            <span class="text-2xl font-bold text-white">최우수상</span>
-          </div>
-        </div>
-        <div class="flex flex-col items-center w-72 gap-4">
-          <div class="bg-gray-800 rounded-lg shadow-2xl p-6 w-full transform hover:scale-105 transition-transform">
-            <div class="w-full h-48 mb-4 flex items-center justify-center text-7xl font-bold text-gray-600" aria-hidden="true">?</div>
-            <div class="text-2xl font-semibold text-center text-white mb-2">미정</div>
-          </div>
-          <div
-            class="w-full bg-gradient-to-br from-yellow-400 to-orange-500 h-32 rounded-lg flex items-center justify-center">
-            <span class="text-4xl font-bold text-white">대상</span>
+      <!-- 금액이 정해지면 각 카드의 '미정'을 바꿔주세요 (예: 100만원) -->
+      <div class="grid gap-6 md:grid-cols-3 md:items-end">
+        <!-- 대상 -->
+        <div class="md:order-2 relative rounded-2xl p-[2px] bg-gradient-to-br from-yellow-300 via-yellow-500 to-orange-500 shadow-2xl shadow-yellow-500/20 md:-translate-y-6">
+          <div class="rounded-2xl bg-gray-900 px-6 py-10 text-center">
+            <div class="text-5xl mb-4" aria-hidden="true">🏆</div>
+            <p class="text-sm font-bold tracking-widest text-yellow-400 mb-2">1ST</p>
+            <h3 class="text-3xl font-extrabold text-white mb-6">대상</h3>
+            <p class="text-sm text-gray-400 mb-1">상금</p>
+            <p class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400 tabular-nums">100만원</p>
+            <p class="mt-6 text-sm text-gray-400">1팀</p>
           </div>
         </div>
-        <div class="flex flex-col items-center w-64 gap-4">
-          <div class="bg-gray-800 rounded-lg shadow-2xl p-6 w-full transform hover:scale-105 transition-transform">
-            <div class="w-full h-40 mb-4 flex items-center justify-center text-6xl font-bold text-gray-600" aria-hidden="true">?</div>
-            <div class="text-xl font-semibold text-center text-white mb-2">미정</div>
-          </div>
-          <div
-            class="w-full bg-gradient-to-br from-[#b58845] to-[#8c6f36] h-20 rounded-lg flex items-center justify-center">
-            <span class="text-2xl font-bold text-white">우수상(2팀)</span>
-          </div>
-        </div>
-      </div>
-      <div class="md:hidden space-y-4 mb-16">
-        <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl p-1">
-          <div class="bg-gray-800 rounded-lg p-4 flex items-center gap-4">
-            <div class="text-4xl">🏆</div>
-            <div class="flex-1">
-              <h3 class="text-lg font-bold text-white">대상</h3>
-              <p class="text-2xl font-semibold text-white">미정</p>
-            </div>
+        <!-- 최우수상 -->
+        <div class="md:order-1 relative rounded-2xl p-[2px] bg-gradient-to-br from-gray-200 to-gray-500 shadow-xl">
+          <div class="rounded-2xl bg-gray-900 px-6 py-8 text-center">
+            <div class="text-4xl mb-4" aria-hidden="true">🥈</div>
+            <p class="text-sm font-bold tracking-widest text-gray-300 mb-2">2ND</p>
+            <h3 class="text-2xl font-extrabold text-white mb-6">최우수상</h3>
+            <p class="text-sm text-gray-400 mb-1">상금</p>
+            <p class="text-3xl md:text-4xl font-black text-gray-100 tabular-nums">70만원</p>
+            <p class="mt-6 text-sm text-gray-400">1팀</p>
           </div>
         </div>
-        <div class="bg-gray-800 rounded-xl shadow-lg p-4 flex items-center gap-4 border-2 border-gray-300">
-          <div class="text-4xl">🥈</div>
-          <div class="flex-1">
-            <h3 class="text-lg font-bold text-white">최우수상</h3>
-            <p class="text-2xl font-semibold text-white">미정</p>
-          </div>
-        </div>
-        <div class="bg-gray-800 rounded-xl shadow-lg p-4 flex items-center gap-4 border-2 border-[#b58845]">
-          <div class="text-4xl">🥉</div>
-          <div class="flex-1">
-            <h3 class="text-lg font-bold text-white">우수상(2팀)</h3>
-            <p class="text-2xl font-semibold text-white">미정</p>
+        <!-- 우수상 -->
+        <div class="md:order-3 relative rounded-2xl p-[2px] bg-gradient-to-br from-[#d4a35f] to-[#8c6f36] shadow-xl">
+          <div class="rounded-2xl bg-gray-900 px-6 py-8 text-center">
+            <div class="text-4xl mb-4" aria-hidden="true">🥉</div>
+            <p class="text-sm font-bold tracking-widest text-[#d4a35f] mb-2">3RD</p>
+            <h3 class="text-2xl font-extrabold text-white mb-6">우수상</h3>
+            <p class="text-sm text-gray-400 mb-1">상금</p>
+            <p class="text-3xl md:text-4xl font-black text-[#e8c48d] tabular-nums">50만원</p>
+            <p class="mt-6 text-sm text-gray-400">2팀 · 팀당</p>
           </div>
         </div>
       </div>
