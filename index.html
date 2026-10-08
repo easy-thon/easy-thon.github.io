@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#060918" />
   <link rel="icon" type="image/x-icon" href="https://easy-thon.github.io/assets/favicon.ico" />
   <title>EasyThon 2026 | 누구나 쉽게 참여하는 해커톤</title>
   <meta name="description" content="EasyThon 2026는 초보자부터 전문가까지 누구나 쉽게 참여할 수 있는 해커톤입니다." />
@@ -19,8 +20,10 @@
   <meta name="twitter:description" content="EasyThon 2026는 초보자부터 전문가까지 누구나 쉽게 참여할 수 있는 해커톤입니다." />
   <meta name="twitter:image" content="https://easy-thon.github.io/assets/og-image.png" />
 
-  <!-- Fonts -->
+  <!-- Fonts (the crossorigin preconnect also warms the connection three.js is imported over) -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT/fonts/variable/woff2/SUIT-Variable.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/jetbrains-mono@5.3.0/wght.css" rel="stylesheet" />
 
   <!-- Tailwind (CDN) with SUIT as default sans -->
   <script>
@@ -39,6 +42,14 @@
             'Apple SD Gothic Neo',
             'Malgun Gothic',
             'sans-serif'
+          ],
+          mono: [
+            '"JetBrains Mono Variable"',
+            'ui-monospace',
+            'SFMono-Regular',
+            'Menlo',
+            'Consolas',
+            'monospace'
           ]
         }
       }
@@ -46,520 +57,338 @@
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <style>
-    /* Ensure SUIT applies even with Tailwind's font-sans */
-    body.font-sans {
-      font-family: 'SUIT Variable', 'SUIT', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-    }
-
-    /* Hero background grid */
-    .hero-grid {
-      background-color: #0b1b3a;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-      background-size: 36px 36px, 36px 36px;
-      background-position: 0 0, 0 0;
-    }
-
-    @keyframes fade-in-up {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .animate-fade-in-up {
-      animation: fade-in-up 1s ease-out;
-    }
-
-    /* Prevent awkward word breaks for Korean text */
-    .wb-keep {
-      word-break: keep-all;
-      hyphens: none;
-    }
-  </style>
+  <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 
-<body class="font-sans antialiased bg-gray-900 text-white">
-  <!-- Nav -->
-  <nav class="fixed top-0 left-0 right-0 z-50 bg-gray-900/90 backdrop-blur-md shadow-lg">
-    <div class="container mx-auto px-12 md:px-24 lg:px-32 xl:px-40">
-      <div class="flex items-center justify-between h-16">
-        <a href="#hero" class="flex items-center gap-2 text-2xl font-extrabold">EasyThon</a>
-        <div class="hidden md:flex items-center gap-10">
-          <a href="#about" class="text-gray-300 hover:text-white font-medium">소개</a>
-          <a href="#schedule" class="text-gray-300 hover:text-white font-medium">일정</a>
-          <a href="#prizes" class="text-gray-300 hover:text-white font-medium">상금</a>
-          <a href="#faq" class="text-gray-300 hover:text-white font-medium">FAQ</a>
-        </div>
-        <button id="navToggle" class="md:hidden p-2 text-gray-300 hover:text-white" aria-label="Toggle menu">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
-      <div id="mobileMenu" class="md:hidden overflow-hidden transition-all duration-300 max-h-0 opacity-0">
-        <div class="py-4 space-y-2">
-          <a href="#about" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">소개</a>
-          <a href="#schedule" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">일정</a>
-          <a href="#prizes" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">상금</a>
-          <a href="#faq" class="block px-4 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg">FAQ</a>
-        </div>
-      </div>
-    </div>
-  </nav>
+<body class="font-sans antialiased text-white">
+  <div id="scroll-progress" class="scroll-progress" aria-hidden="true"></div>
 
-  <!-- Hero -->
-  <section id="hero"
-    class="relative min-h-screen flex items-center justify-center hero-grid text-white overflow-hidden">
-    <div class="relative z-10 container mx-auto px-4 text-center">
-      <div class="animate-fade-in-up">
-        <h1 class="text-5xl md:text-7xl lg:text-8xl font-extrabold mb-8 mt-20 leading-tight">
-          <span class="text-white">
-            <span class="hidden md:inline">EasyThon 2026</span>
-            <span class="md:hidden block">EasyThon 2026</span>
-          </span>
-        </h1>
-        <h1 class="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-8 mt-13 leading-tight">
-          <span class="text-white">
-            <span class="hidden md:inline">누구나 쉽게 참여하는 해커톤</span>
-            <span class="md:hidden block">누구나 쉽게<br />참여하는<br />해커톤</span>
-          </span>
-        </h1>
-        <div class="flex flex-col sm:flex-row gap-4 items-center justify-center mb-8">
-          <div class="flex items-center gap-2">
-            <span class="text-lg md:text-xl text-gray-200">2026년 11월 14일</span>
-          </div>
-          <span class="hidden sm:inline-block h-6 w-px bg-gray-600 mx-4" aria-hidden="true"></span>
-          <div class="flex items-center gap-2">
-            <span class="text-lg md:text-xl text-gray-200">미디어센터 507호</span>
-          </div>
-        </div>
-        <div class="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-          <a id="apply-open" href="https://link.dkuaegis.org/easython-2026" target="_blank" rel="noopener noreferrer"
-            class="inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 px-8 py-4 text-lg !bg-white !text-[#1f1e33] !border-none !shadow-none hover:!bg-gray-100">바로
-            신청하기 →</a>
-          <button id="apply-closed" type="button" disabled
-            class="hidden items-center justify-center font-semibold rounded-lg transition-all duration-300 px-8 py-4 text-lg bg-gray-600/60 text-gray-200 border border-gray-500 cursor-not-allowed opacity-80">
-            신청 마감
-          </button>
-        </div>
-        <p id="apply-open-note" class="mt-4 text-sm text-gray-300">
-          신청 마감: 2026년 11월 3일 (화) 밤 12시
-        </p>
-        <p id="apply-closed-note" class="hidden mt-4 text-sm text-gray-300">
-          EasyThon 2026 참가 신청은 종료되었습니다.<br>궁금한 점은
-          <a href="https://instagram.com/dku_aegis" target="_blank" rel="noopener noreferrer"
-            class="text-white font-semibold hover:underline">인스타그램 @dku_aegis</a>로 문의해주세요.
-        </p>
-        <div class="mt-20 animate-bounce">
-          <a href="#about" class="inline-block" aria-label="scroll to about">
-            <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3">
-              </path>
-            </svg>
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Shared gradient for the E mark -->
+  <svg class="absolute" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="g-mark" gradientUnits="userSpaceOnUse" x1="-1.2" y1="-1.45" x2="1.2" y2="1.45">
+        <stop offset="0" stop-color="#22d3ee" />
+        <stop offset="0.5" stop-color="#818cf8" />
+        <stop offset="1" stop-color="#e879f9" />
+      </linearGradient>
+    </defs>
+  </svg>
 
-  <!-- About -->
-  <section id="about" class="py-20 bg-gray-900">
-    <div class="container mx-auto px-4 max-w-4xl">
-      <div class="mb-12 text-center">
-        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-          About EasyThon</h2>
+  <!-- Top bar -->
+  <header id="topbar" class="topbar">
+    <a href="#intro" class="brand">
+      <svg class="w-6 h-6" viewBox="-2 -2 4 4" fill="url(#g-mark)" aria-hidden="true">
+        <rect x="-1.2" y="-1.45" width="0.56" height="2.9" rx="0.28" />
+        <rect x="-0.47" y="-1.45" width="1.67" height="0.56" rx="0.28" />
+        <rect x="-0.47" y="-0.28" width="1.25" height="0.56" rx="0.28" />
+        <rect x="-0.47" y="0.89" width="1.67" height="0.56" rx="0.28" />
+      </svg>
+      EasyThon
+    </a>
+    <nav class="tabs" aria-label="바로가기">
+      <a href="#schedule" class="tab">일정</a>
+      <a href="#prizes" class="tab">상금</a>
+      <a href="#guide" class="tab">참가 안내</a>
+    </nav>
+    <a data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank"
+      rel="noopener noreferrer" class="btn btn-sm btn-primary">신청하기 <span class="dday" data-dday></span></a>
+    <span data-apply-closed class="hidden btn btn-sm btn-closed">신청 마감</span>
+  </header>
+
+  <main class="experience">
+    <!-- 3D stage: assets/js/scene.js draws seven bars here that re-form for every scene of the story.
+         The flat E is what shows until WebGL is up, and what stays if it never is. -->
+    <div id="stage" class="stage">
+      <svg class="stage-mark" viewBox="-2 -2 4 4" fill="url(#g-mark)" aria-hidden="true">
+        <rect x="-1.2" y="-1.45" width="0.56" height="2.9" rx="0.28" />
+        <rect x="-0.47" y="-1.45" width="1.67" height="0.56" rx="0.28" />
+        <rect x="-0.47" y="-0.28" width="1.25" height="0.56" rx="0.28" />
+        <rect x="-0.47" y="0.89" width="1.67" height="0.56" rx="0.28" />
+      </svg>
+      <canvas id="scene" aria-hidden="true"></canvas>
+      <div class="stage-clock" aria-hidden="true">
+        <span class="stage-clock-time" data-clock-time>09:00</span>
+        <span class="stage-clock-what" data-clock-what>개회식</span>
       </div>
-      <div class="space-y-8">
-        <div class="space-y-6">
-          <h3 class="text-3xl font-bold text-white">Easy + Marathon = EasyThon</h3>
-          <p class="text-lg text-gray-300 leading-relaxed">
-            이지톤은 부담 없이 시작하는 해커톤 입니다. 개발 경험이 적은 분부터 풍부한 분까지 모두 환영합니다.
-            아이디어만 있다면 함께 팀을 이루고 만들고 배우며 성장할 수 있는 열린 무대를 제공합니다.
+      <p class="stage-hint" aria-hidden="true">드래그해서 돌려보세요</p>
+    </div>
+
+    <div class="story">
+      <!-- Intro: what, when, where -->
+      <section id="intro" class="scene" data-scene="logo">
+        <div class="scene-body">
+          <p class="eyebrow">Easy + Marathon = EasyThon</p>
+          <h1 class="title mt-3">EasyThon <span class="text-gradient">2026</span></h1>
+          <p class="lead mt-3 wb-keep">누구나 쉽게 참여하는 해커톤</p>
+          <p class="copy mt-3 wb-keep">개발 경험이 적은 분부터 풍부한 분까지 모두 환영합니다. 아이디어만 있다면 함께 팀을 이루고 만들고 배우며 성장할 수 있는 열린 무대를 제공합니다.</p>
+          <dl class="facts mt-6">
+            <div>
+              <dt>일시</dt>
+              <dd>2026.11.14 (토)<small data-hours>09:00 – 19:00</small></dd>
+            </div>
+            <div>
+              <dt>장소</dt>
+              <dd>미디어센터 507호</dd>
+            </div>
+            <div>
+              <dt>참가비</dt>
+              <dd>무료</dd>
+            </div>
+            <div>
+              <dt>총 상금</dt>
+              <dd data-prize-total>270만원</dd>
+            </div>
+          </dl>
+          <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <a id="apply-open" data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank"
+              rel="noopener noreferrer" class="btn btn-lg btn-primary">바로 신청하기 →</a>
+            <button id="apply-closed" data-apply-closed type="button" disabled class="hidden btn btn-lg btn-closed">
+              신청 마감
+            </button>
+            <p id="apply-open-note" data-apply-open class="text-sm text-slate-400 wb-keep">
+              신청 마감: 2026년 11월 3일 (화) 밤 12시 <span class="dday text-indigo-300" data-dday></span>
+            </p>
+            <p id="apply-closed-note" data-apply-closed class="hidden text-sm text-gray-300 wb-keep">
+              EasyThon 2026 참가 신청은 종료되었습니다.<br>궁금한 점은
+              <a href="https://instagram.com/dku_aegis" target="_blank" rel="noopener noreferrer"
+                class="text-white font-semibold hover:underline">인스타그램 @dku_aegis</a>로 문의해주세요.
+            </p>
+          </div>
+          <div class="countdown mt-7">
+            <p class="text-sm font-semibold text-slate-400">해커톤 시작까지</p>
+            <div id="countdown-timer" class="flex items-baseline gap-3" role="timer"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Schedule: the scroll (or the pointer) steps through the day, and the dial on the stage turns with it.
+           scene.js sizes the dial segments from data-time, so the list is the only place to edit. -->
+      <section id="schedule" class="scene scene-steps" data-scene="clock">
+        <div class="scene-pin">
+          <div class="scene-body">
+            <h2 class="heading">일정</h2>
+            <ol class="milestones mt-6">
+              <li class="milestone" data-milestone="apply">
+                <p class="milestone-name">신청 마감</p>
+                <time datetime="2026-11-03">11.3 (화) 밤 12시</time>
+              </li>
+              <li class="milestone" data-milestone="topic">
+                <p class="milestone-name">주제 공개</p>
+                <time datetime="2026-11-06T14:00:00+09:00">11.6 (금) 오후 2시</time>
+              </li>
+              <li class="milestone" data-milestone="start">
+                <p class="milestone-name">해커톤</p>
+                <time datetime="2026-11-14T09:00:00+09:00">11.14 (토)</time>
+              </li>
+            </ol>
+            <ol id="timeline" class="mt-6">
+              <li class="tl-row" data-time="09:00">
+                <time>09:00</time>
+                <h3>개회식</h3>
+                <span class="tl-span"></span>
+              </li>
+              <li class="tl-row" data-time="10:00">
+                <time>10:00</time>
+                <h3>개발 시작</h3>
+                <span class="tl-span"></span>
+              </li>
+              <li class="tl-row" data-time="12:00">
+                <time>12:00</time>
+                <h3>중식</h3>
+                <span class="tl-span"></span>
+              </li>
+              <li class="tl-row" data-time="13:00">
+                <time>13:00</time>
+                <h3>개발 및 발표 준비</h3>
+                <span class="tl-span"></span>
+              </li>
+              <li class="tl-row" data-time="16:00">
+                <time>16:00</time>
+                <h3>최종 발표 및 심사</h3>
+                <span class="tl-span"></span>
+              </li>
+              <li class="tl-row" data-time="18:30">
+                <time>18:30</time>
+                <h3>시상식</h3>
+                <span class="tl-span"></span>
+              </li>
+              <li class="tl-row" data-time="19:00">
+                <time>19:00</time>
+                <h3>폐회식</h3>
+                <span class="tl-span"></span>
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- Prizes: scene.js builds the podium from data-amount (만원) and data-teams,
+           effects.js adds them up for the totals -->
+      <section id="prizes" class="scene" data-scene="podium">
+        <div class="scene-body">
+          <h2 class="heading">상금</h2>
+          <p class="mt-6">
+            <span class="block text-sm font-semibold text-slate-400">총 상금</span>
+            <strong class="total-value text-gradient" data-prize-total data-count>270만원</strong>
           </p>
-          <div class="space-y-4 pl-4 md:pl-8 lg:pl-12">
-            <div class="flex items-start gap-4">
-              <img src="assets/light-bulb.png" alt="아이디어" class="w-8 h-8 flex-shrink-0 object-contain" />
-              <div>
-                <h4 class="font-semibold text-lg text-white">아이디어 실현</h4>
-                <p class="text-gray-400">머릿속에만 있던 아이디어를 직접 기획하고 구현하며 '0에서 '1'을 만드는 경험을 해보세요.</p>
-              </div>
-            </div>
-            <div class="flex items-start gap-4">
-              <img src="assets/support.png" alt="협업" class="w-8 h-8 flex-shrink-0 object-contain" />
-              <div>
-                <h4 class="font-semibold text-lg text-white">협업과 네트워킹</h4>
-                <p class="text-gray-400">같은 목표를 가진 열정적인 동료들과 만나 협업하며, 해커톤이 끝난 후에도 이어질 인연을 만들 수 있어요.
-                </p>
-              </div>
-            </div>
-            <div class="flex items-start gap-4">
-              <img src="assets/growth.png" alt="배움" class="w-8 h-8 flex-shrink-0 object-contain" />
-              <div>
-                <h4 class="font-semibold text-lg text-white">성장의 발판</h4>
-                <p class="text-gray-400">성공, 실패 여부와 관계없이, 몰입하고 부딪히며 얻게 되는 모든 경험이 성장의 밑거름이 돼요.</p>
-              </div>
-            </div>
-          </div>
+          <p class="copy mt-1 wb-keep">수상팀에게는 아래 상금이 지급됩니다</p>
+          <ol id="prize-list" class="mt-6">
+            <li class="prize-row" data-amount="100" data-teams="1" style="--metal: #f7b733">
+              <span class="prize-rank">대상</span>
+              <span class="prize-amount">100만원</span>
+              <span class="prize-teams">1팀</span>
+            </li>
+            <li class="prize-row" data-amount="70" data-teams="1" style="--metal: #d5dbe6">
+              <span class="prize-rank">최우수상</span>
+              <span class="prize-amount">70만원</span>
+              <span class="prize-teams">1팀</span>
+            </li>
+            <li class="prize-row" data-amount="50" data-teams="2" style="--metal: #d08a4e">
+              <span class="prize-rank">우수상</span>
+              <span class="prize-amount">50만원</span>
+              <span class="prize-teams">2팀 · 팀당</span>
+            </li>
+          </ol>
         </div>
-      </div>
-    </div>
-  </section>
+      </section>
 
-  <!-- Countdown -->
-  <section id="countdown"
-    class="relative py-20 overflow-hidden bg-gradient-to-br from-white via-[#FFF8E7] to-[#FFFBF0]">
-    <div class="absolute inset-0 opacity-10" aria-hidden="true">
-      <div class="absolute top-10 left-10 w-72 h-72 bg-gray-200 rounded-full blur-3xl"></div>
-      <div class="absolute bottom-10 right-10 w-96 h-96 bg-gray-100 rounded-full blur-3xl"></div>
-      <div
-        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gray-300 rounded-full blur-3xl">
-      </div>
-    </div>
-    <div class="container mx-auto px-4 text-center relative z-10">
-      <div class="mb-12 inline-block">
-        <h3 class="text-3xl md:text-5xl font-black text-gray-800 mb-4">해커톤 시작까지</h3>
-        <div class="h-2 w-full bg-gradient-to-r from-transparent via-gray-400 to-transparent rounded-full"></div>
-      </div>
-      <div class="flex justify-center items-center mb-8 w-full">
-        <div
-          class="backdrop-blur-sm bg-gray-50/50 p-3 md:p-8 rounded-2xl md:rounded-3xl border-2 border-gray-300 shadow-2xl shadow-gray-400/50 inline-block">
-          <div id="countdown-timer" class="flex gap-3 md:gap-6 items-stretch"></div>
+      <!-- Guide: who can join, what it costs, what to bring -->
+      <section id="guide" class="scene" data-scene="laptop">
+        <div class="scene-body">
+          <h2 class="heading">참가 안내</h2>
+          <dl class="guide mt-6">
+            <div>
+              <dt>참가 자격</dt>
+              <dd class="wb-keep">단국대학교 재학생 및 휴학생이라면 누구나 참여할 수 있습니다.</dd>
+            </div>
+            <div>
+              <dt>참가비</dt>
+              <dd class="wb-keep">참가비는 무료입니다. 대회 기간 동안 식사, 간식, 개발 환경이 제공됩니다.</dd>
+            </div>
+            <div>
+              <dt>준비물</dt>
+              <dd class="wb-keep">개인 노트북, 충전기, 멀티탭을 꼭 지참해주세요.</dd>
+            </div>
+            <div>
+              <dt>팀 구성</dt>
+              <dd class="wb-keep">개인 참가도 가능합니다! 운영진이 지원자의 포지션, 지원 동기, 프로젝트 경험을 바탕으로 팀을 구성해 드립니다.</dd>
+            </div>
+          </dl>
         </div>
-      </div>
-    </div>
-  </section>
+      </section>
 
-  <!-- Schedule -->
-  <section id="schedule" class="py-20 bg-gray-800">
-    <div class="container mx-auto px-4 max-w-6xl">
-      <div class="mb-12 text-center">
-        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-          Schedule</h2>
-      </div>
-      <div class="space-y-12">
-        <div class="border-l-4 border-blue-400 pl-8">
-          <div class="mb-6">
-            <h3 class="text-3xl font-bold text-white">주제 공개</h3>
-            <p class="text-lg text-gray-400">2026.11.6. (금) 오후 2시</p>
+      <!-- Apply -->
+      <section id="apply" class="scene" data-scene="arrow">
+        <div class="scene-body">
+          <h2 class="heading">참가 신청</h2>
+          <p class="copy mt-5 wb-keep" data-apply-open>
+            신청 마감: 2026년 11월 3일 (화) 밤 12시 <span class="dday text-indigo-300" data-dday></span>
+          </p>
+          <p class="copy mt-5 hidden wb-keep" data-apply-closed>EasyThon 2026 참가 신청은 종료되었습니다.</p>
+          <div class="mt-6">
+            <a data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank"
+              rel="noopener noreferrer" class="btn btn-lg btn-primary">바로 신청하기 →</a>
+            <button data-apply-closed type="button" disabled class="hidden btn btn-lg btn-closed">신청 마감</button>
           </div>
+          <p class="copy mt-10 wb-keep">더 궁금한 점은 아래로 문의 해주세요!<br>인스타그램:
+            <a href="https://instagram.com/dku_aegis" target="_blank" rel="noopener noreferrer"
+              class="text-white font-semibold hover:underline">@dku_aegis</a>
+          </p>
         </div>
-        <div class="border-l-4 border-blue-400 pl-8">
-          <div class="mb-6">
-            <h3 class="text-3xl font-bold text-white">해커톤 당일</h3>
-            <p class="text-lg text-gray-400">2026.11.14. (토)</p>
-          </div>
-          <div class="space-y-6">
-            <div class="relative flex gap-6 group">
-              <div
-                class="absolute -left-[42px] w-4 h-4 bg-blue-400 rounded-full border-4 border-gray-800 group-hover:scale-150 transition-transform">
-              </div>
-              <div class="flex-shrink-0 w-20"><span class="text-lg font-semibold text-white">09:00</span></div>
-              <div class="flex-1 pb-8">
-                <h4 class="text-lg font-semibold text-white mb-1">개회식</h4>
-              </div>
-            </div>
-            <div class="relative flex gap-6 group">
-              <div
-                class="absolute -left-[42px] w-4 h-4 bg-blue-400 rounded-full border-4 border-gray-800 group-hover:scale-150 transition-transform">
-              </div>
-              <div class="flex-shrink-0 w-20"><span class="text-lg font-semibold text-white">10:00</span></div>
-              <div class="flex-1 pb-8">
-                <h4 class="text-lg font-semibold text-white mb-1">개발 시작</h4>
-              </div>
-            </div>
-            <div class="relative flex gap-6 group">
-              <div
-                class="absolute -left-[42px] w-4 h-4 bg-blue-400 rounded-full border-4 border-gray-800 group-hover:scale-150 transition-transform">
-              </div>
-              <div class="flex-shrink-0 w-20"><span class="text-lg font-semibold text-white">12:00</span></div>
-              <div class="flex-1 pb-8">
-                <h4 class="text-lg font-semibold text-white mb-1">중식</h4>
-              </div>
-            </div>
-            <div class="relative flex gap-6 group">
-              <div
-                class="absolute -left-[42px] w-4 h-4 bg-blue-400 rounded-full border-4 border-gray-800 group-hover:scale-150 transition-transform">
-              </div>
-              <div class="flex-shrink-0 w-20"><span class="text-lg font-semibold text-white">13:00</span></div>
-              <div class="flex-1 pb-8">
-                <h4 class="text-lg font-semibold text-white mb-1">개발 및 발표 준비</h4>
-              </div>
-            </div>
-            <div class="relative flex gap-6 group">
-              <div
-                class="absolute -left-[42px] w-4 h-4 bg-blue-400 rounded-full border-4 border-gray-800 group-hover:scale-150 transition-transform">
-              </div>
-              <div class="flex-shrink-0 w-20"><span class="text-lg font-semibold text-white">16:00</span></div>
-              <div class="flex-1 pb-8">
-                <h4 class="text-lg font-semibold text-white mb-1">최종 발표 및 심사</h4>
-              </div>
-            </div>
-            <div class="relative flex gap-6 group">
-              <div
-                class="absolute -left-[42px] w-4 h-4 bg-blue-400 rounded-full border-4 border-gray-800 group-hover:scale-150 transition-transform">
-              </div>
-              <div class="flex-shrink-0 w-20"><span class="text-lg font-semibold text-white">18:30</span></div>
-              <div class="flex-1 pb-8">
-                <h4 class="text-lg font-semibold text-white mb-1">시상식</h4>
-              </div>
-            </div>
-            <div class="relative flex gap-6 group">
-              <div
-                class="absolute -left-[42px] w-4 h-4 bg-blue-400 rounded-full border-4 border-gray-800 group-hover:scale-150 transition-transform">
-              </div>
-              <div class="flex-shrink-0 w-20"><span class="text-lg font-semibold text-white">19:00</span></div>
-              <div class="flex-1 pb-8">
-                <h4 class="text-lg font-semibold text-white mb-1">폐회식</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
-  </section>
-
-  <!-- Prizes -->
-  <section id="prizes" class="relative py-20 bg-gradient-to-br from-gray-900 to-gray-800 overflow-hidden">
-    <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
-      <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[36rem] h-[36rem] bg-yellow-400/10 rounded-full blur-3xl"></div>
-    </div>
-    <div class="relative container mx-auto px-4 max-w-5xl">
-      <div class="mb-16 text-center">
-        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Prizes</h2>
-        <p class="text-lg text-gray-400 wb-keep">수상팀에게는 아래 상금이 지급됩니다</p>
-      </div>
-      <!-- 금액이 정해지면 각 카드의 '미정'을 바꿔주세요 (예: 100만원) -->
-      <div class="grid gap-6 md:grid-cols-3 md:items-end">
-        <!-- 대상 -->
-        <div class="md:order-2 relative rounded-2xl p-[2px] bg-gradient-to-br from-yellow-300 via-yellow-500 to-orange-500 shadow-2xl shadow-yellow-500/20 md:-translate-y-6">
-          <div class="rounded-2xl bg-gray-900 px-6 py-10 text-center">
-            <div class="text-5xl mb-4" aria-hidden="true">🏆</div>
-            <p class="text-sm font-bold tracking-widest text-yellow-400 mb-2">1ST</p>
-            <h3 class="text-3xl font-extrabold text-white mb-6">대상</h3>
-            <p class="text-sm text-gray-400 mb-1">상금</p>
-            <p class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400 tabular-nums">100만원</p>
-            <p class="mt-6 text-sm text-gray-400">1팀</p>
-          </div>
-        </div>
-        <!-- 최우수상 -->
-        <div class="md:order-1 relative rounded-2xl p-[2px] bg-gradient-to-br from-gray-200 to-gray-500 shadow-xl">
-          <div class="rounded-2xl bg-gray-900 px-6 py-8 text-center">
-            <div class="text-4xl mb-4" aria-hidden="true">🥈</div>
-            <p class="text-sm font-bold tracking-widest text-gray-300 mb-2">2ND</p>
-            <h3 class="text-2xl font-extrabold text-white mb-6">최우수상</h3>
-            <p class="text-sm text-gray-400 mb-1">상금</p>
-            <p class="text-3xl md:text-4xl font-black text-gray-100 tabular-nums">70만원</p>
-            <p class="mt-6 text-sm text-gray-400">1팀</p>
-          </div>
-        </div>
-        <!-- 우수상 -->
-        <div class="md:order-3 relative rounded-2xl p-[2px] bg-gradient-to-br from-[#d4a35f] to-[#8c6f36] shadow-xl">
-          <div class="rounded-2xl bg-gray-900 px-6 py-8 text-center">
-            <div class="text-4xl mb-4" aria-hidden="true">🥉</div>
-            <p class="text-sm font-bold tracking-widest text-[#d4a35f] mb-2">3RD</p>
-            <h3 class="text-2xl font-extrabold text-white mb-6">우수상</h3>
-            <p class="text-sm text-gray-400 mb-1">상금</p>
-            <p class="text-3xl md:text-4xl font-black text-[#e8c48d] tabular-nums">50만원</p>
-            <p class="mt-6 text-sm text-gray-400">2팀 · 팀당</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-
-  <!-- FAQ -->
-  <section id="faq" class="py-20 bg-gray-800">
-    <div class="container mx-auto px-4 max-w-4xl">
-      <div class="text-center mb-12">
-        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">
-          FAQ</h2>
-        <p class="text-lg text-gray-400">자주 묻는 질문들을 확인해보세요</p>
-      </div>
-      <div class="space-y-4" id="faq-list">
-        <!-- FAQ items inserted by script -->
-      </div>
-      <div class="mt-12 p-6 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg text-left">
-        <p class="text-gray-200 mb-3">더 궁금한 점은 아래로 문의 해주세요!</p>
-        <p class="text-gray-200 mb-1">인스타그램: <a href="https://instagram.com/dku_aegis" target="_blank"
-            rel="noopener noreferrer" class="text-white font-semibold hover:underline">@dku_aegis</a></p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Floating Apply Button -->
-  <a id="floating-apply" href="https://link.dkuaegis.org/easython-2026" target="_blank" rel="noopener noreferrer"
-    class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-8 py-4 border-2 border-gray-800/50 rounded-full shadow-2xl transition-all duration-300 font-bold text-lg flex items-center gap-2 translate-y-20 opacity-0 pointer-events-none"
-    style="background:#1f1e33;color:#F3F3F3;border-color:white;border-width: 1px;">
-    <span>신청하기</span>
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-    </svg>
-  </a>
+  </main>
 
   <!-- Footer -->
-  <footer class="bg-gray-900 text-gray-300 py-12">
-    <div class="container mx-auto px-4 max-w-6xl">
-      <div class="grid gap-8 mb-12">
-        <div>
-          <h3 class="text-2xl font-bold text-white mb-4">EasyThon 2026</h3>
-          <p class="text-gray-400 mb-4">누구나 쉽게 참여하는 해커톤</p>
-          <div class="flex gap-4">
-            <a href="https://github.com/dkuaegis" target="_blank" class="hover:text-white transition-colors"
-              aria-label="GitHub">
-              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path
-                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-              </svg>
-            </a>
-            <a href="https://www.instagram.com/dku_aegis" target="_blank" class="hover:text-white transition-colors"
-              aria-label="Instagram">
-              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path
-                  d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-              </svg>
-            </a>
-          </div>
-        </div>
+  <footer id="footer" class="footer text-gray-300">
+    <div class="container mx-auto px-6 py-10 max-w-6xl flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div>
+        <p class="text-xl font-extrabold text-white">EasyThon <span class="text-gradient">2026</span></p>
+        <p class="mt-1 text-sm text-gray-400">누구나 쉽게 참여하는 해커톤</p>
+        <p class="mt-5 text-sm text-gray-400">© 2026 EasyThon. Organized by Aegis. All rights reserved.</p>
       </div>
-      <div class="border-t border-gray-800 pt-8">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p class="text-sm text-gray-400">© 2026 EasyThon. Organized by Aegis. All rights reserved.</p>
-        </div>
+      <div class="flex gap-3">
+        <a href="https://github.com/dkuaegis" target="_blank" rel="noopener noreferrer" class="social-link"
+          aria-label="GitHub">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+          </svg>
+        </a>
+        <a href="https://www.instagram.com/dku_aegis" target="_blank" rel="noopener noreferrer" class="social-link"
+          aria-label="Instagram">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path
+              d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+          </svg>
+        </a>
       </div>
     </div>
   </footer>
 
   <script>
-    // Mobile nav toggle
-    const navToggle = document.getElementById('navToggle');
-    const mobileMenu = document.getElementById('mobileMenu');
-    if (navToggle && mobileMenu) {
-      navToggle.addEventListener('click', () => {
-        const isOpen = mobileMenu.classList.contains('max-h-96');
-        mobileMenu.classList.toggle('max-h-96', !isOpen);
-        mobileMenu.classList.toggle('opacity-100', !isOpen);
-        mobileMenu.classList.toggle('max-h-0', isOpen);
-        mobileMenu.classList.toggle('opacity-0', isOpen);
-      });
-      mobileMenu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-        mobileMenu.classList.remove('max-h-96', 'opacity-100');
-        mobileMenu.classList.add('max-h-0', 'opacity-0');
-      }));
-    }
-
     // Application: open until the deadline, then switch to the closed state
     const APPLY_URL = 'https://link.dkuaegis.org/easython-2026';
     const APPLY_DEADLINE = new Date('2026-11-03T12:00:00+09:00');
-    const fab = document.getElementById('floating-apply');
-    const applyOpen = document.getElementById('apply-open');
     let applyClosed = false;
-    if (APPLY_URL) {
-      if (applyOpen) applyOpen.href = APPLY_URL;
-      if (fab) fab.href = APPLY_URL;
-    }
+    if (APPLY_URL) document.querySelectorAll('a[data-apply]').forEach(a => { a.href = APPLY_URL; });
     function checkApplyDeadline() {
       if (applyClosed || Date.now() < APPLY_DEADLINE.getTime()) return;
       applyClosed = true;
-      const applyClosedBtn = document.getElementById('apply-closed');
-      if (applyOpen) applyOpen.classList.add('hidden');
-      if (applyClosedBtn) {
-        applyClosedBtn.classList.remove('hidden');
-        applyClosedBtn.classList.add('inline-flex');
-      }
-      document.getElementById('apply-open-note')?.classList.add('hidden');
-      document.getElementById('apply-closed-note')?.classList.remove('hidden');
-      if (fab) {
-        fab.removeAttribute('href');
-        fab.removeAttribute('target');
-        fab.setAttribute('role', 'status');
-        fab.classList.add('pointer-events-none');
-        fab.querySelector('span').textContent = '지원 마감';
-        fab.querySelector('path').setAttribute('d', 'M6 12l4 4 8-8');
-      }
+      document.querySelectorAll('[data-apply-open]').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('[data-apply-closed]').forEach(el => el.classList.remove('hidden'));
+      // nothing left to point at: the last scene shows the logo instead of the arrows
+      const applyScene = document.getElementById('apply');
+      if (applyScene) applyScene.dataset.scene = 'logo';
+      window.dispatchEvent(new Event('resize'));
     }
     checkApplyDeadline();
     setInterval(checkApplyDeadline, 1000);
 
-    // Floating apply button show on scroll > 80% viewport height
-    const onScroll = () => {
-      if (!fab) return;
-      if (window.scrollY > window.innerHeight * 0.8) {
-        fab.classList.remove('translate-y-20', 'opacity-0');
-        if (!applyClosed) fab.classList.remove('pointer-events-none');
-        fab.classList.add('translate-y-0', 'opacity-100');
-      } else {
-        fab.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
-        fab.classList.remove('translate-y-0', 'opacity-100');
-      }
-    };
-    window.addEventListener('scroll', onScroll);
-    onScroll();
-
-    const faqData = [
-      { id: 1, question: '이지톤(EasyThon)이 무엇인가요?', answer: '이지톤은 누구나 쉽게 참여할 수 있는 해커톤입니다. 경험이 많든 적든 모두 환영합니다!' },
-      { id: 2, question: '참가 자격이 어떻게 되나요?', answer: '단국대학교 재학생 및 휴학생이라면 누구나 참여할 수 있습니다.' },
-      { id: 3, question: '참가비가 있나요?', answer: '참가비는 무료입니다. 대회 기간 동안 식사, 간식, 개발 환경이 제공됩니다.' },
-      { id: 4, question: '준비물이 있나요?', answer: '개인 노트북, 충전기, 멀티탭을 꼭 지참해주세요.' },
-      { id: 5, question: '개인 등록 가능한가요?', answer: '개인 참가도 가능합니다! 운영진이 지원자의 포지션, 지원 동기, 프로젝트 경험을 바탕으로 팀을 구성해 드립니다.' },
-    ];
-
-    const faqList = document.getElementById('faq-list');
-    if (faqList) {
-      faqData.forEach(item => {
-        const wrap = document.createElement('div');
-        wrap.className = 'bg-gray-700 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-lg';
-
-        const btn = document.createElement('button');
-        btn.className = 'w-full px-6 py-4 flex items-center justify-between text-left';
-        btn.innerHTML = `<span class="font-semibold text-lg text-white pr-4">${item.question}</span>
-            <svg class="w-6 h-6 text-white flex-shrink-0 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
-
-        const content = document.createElement('div');
-        content.className = 'overflow-hidden transition-all duration-300 max-h-0 opacity-0';
-        const inner = document.createElement('div');
-        inner.className = 'px-6 pb-4 text-gray-300';
-        inner.textContent = item.answer;
-        content.appendChild(inner);
-
-        let open = false;
-        btn.addEventListener('click', () => {
-          open = !open;
-          content.classList.toggle('max-h-96', open);
-          content.classList.toggle('opacity-100', open);
-          content.classList.toggle('max-h-0', !open);
-          content.classList.toggle('opacity-0', !open);
-          const icon = btn.querySelector('svg');
-          if (icon) icon.style.transform = open ? 'rotate(180deg)' : '';
-        });
-
-        wrap.appendChild(btn);
-        wrap.appendChild(content);
-        faqList.appendChild(wrap);
-      });
-    }
-
-    // Countdown (basic blocks)
+    // Countdown (one rolling 3D digit per slot)
     function pad(n) { return n.toString().padStart(2, '0'); }
     const target = new Date('2026-11-14T09:00:00+09:00');
     const timerWrap = document.getElementById('countdown-timer');
+    const rollDigits = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function block(label) {
-      return `<div class="flex flex-col items-center">
-          <div class="flex items-center justify-center" style="width:60px;height:80px;background:#1f2937;color:#e5e7eb;font-weight:900;border-radius:8px;font-size:40px;" data-role="digits">00</div>
-          <div class="mt-2 text-xs font-bold tracking-widest text-gray-500">${label}</div>
+      return `<div class="cd-unit">
+          <div class="cd-digits" data-role="digits"></div>
+          <div class="cd-label">${label}</div>
         </div>`;
     }
+    function setDigits(el, text) {
+      if (el.dataset.value === text) return;
+      // roll only while visible, and never on the first paint or when the digit count changes
+      const roll = rollDigits && !document.hidden && el.children.length === text.length;
+      el.dataset.value = text;
+      while (el.children.length > text.length) el.lastChild.remove();
+      while (el.children.length < text.length) {
+        const slot = document.createElement('span');
+        slot.className = 'cd-digit';
+        el.appendChild(slot);
+      }
+      [...text].forEach((ch, i) => {
+        const slot = el.children[i];
+        const cur = slot.lastElementChild;
+        if (cur && cur.textContent === ch) return;
+        const next = document.createElement('span');
+        next.className = 'cd-face';
+        next.textContent = ch;
+        if (roll && cur) {
+          while (slot.children.length > 1) slot.firstElementChild.remove();
+          cur.className = 'cd-face is-out';
+          cur.setAttribute('aria-hidden', 'true');
+          // by name: after a stalled frame the roll-in can still be ending here, and must not remove the face
+          cur.addEventListener('animationend', e => { if (e.animationName === 'cd-out') cur.remove(); });
+          next.classList.add('is-in');
+          slot.appendChild(next);
+        } else {
+          slot.replaceChildren(next);
+        }
+      });
+    }
     if (timerWrap) {
-      timerWrap.innerHTML = `${block('DAYS')}<div class="self-center text-gray-400">:</div>${block('HOURS')}<div class="self-center text-gray-400">:</div>${block('MINUTES')}<div class="self-center text-gray-400">:</div>${block('SECONDS')}`;
+      timerWrap.innerHTML = `${block('일')}${block('시간')}${block('분')}${block('초')}`;
       const [daysEl, hoursEl, minutesEl, secondsEl] = timerWrap.querySelectorAll('[data-role="digits"]');
       function tick() {
         const now = new Date();
@@ -568,15 +397,21 @@
         const hours = Math.floor(diff / (1000 * 60 * 60)); diff -= hours * 60 * 60 * 1000;
         const minutes = Math.floor(diff / (1000 * 60)); diff -= minutes * 60 * 1000;
         const seconds = Math.floor(diff / 1000);
-        daysEl.textContent = String(days).padStart(2, '0');
-        hoursEl.textContent = pad(hours);
-        minutesEl.textContent = pad(minutes);
-        secondsEl.textContent = pad(seconds);
+        setDigits(daysEl, String(days).padStart(2, '0'));
+        setDigits(hoursEl, pad(hours));
+        setDigits(minutesEl, pad(minutes));
+        setDigits(secondsEl, pad(seconds));
       }
       tick();
       setInterval(tick, 1000);
     }
+
+    // assets/js/effects.js reads the milestone dates (D-day, done or upcoming) from the page
+    document.querySelector('[data-milestone="apply"] time')?.setAttribute('datetime', APPLY_DEADLINE.toISOString());
+    document.querySelector('[data-milestone="start"] time')?.setAttribute('datetime', target.toISOString());
   </script>
+  <script src="assets/js/effects.js" defer></script>
+  <script src="assets/js/scene.js" defer></script>
 </body>
 
 </html>
