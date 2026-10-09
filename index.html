@@ -31,14 +31,14 @@
 </head>
 
 <body>
-  <a class="skip" href="#intro">본문 바로가기</a>
+  <a class="skip" href="#about">본문 바로가기</a>
 
   <!-- Shared gradient for the flat E that stands in for the 3D one -->
   <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="g-mark" gradientUnits="userSpaceOnUse" x1="-1.2" y1="-1.45" x2="1.2" y2="1.45">
         <stop offset="0" stop-color="#e8402f" />
-        <stop offset="1" stop-color="#8c1c13" />
+        <stop offset="1" stop-color="#a52617" />
       </linearGradient>
     </defs>
   </svg>
@@ -54,12 +54,12 @@
       EasyThon
     </a>
     <nav class="nav" aria-label="바로가기">
-      <a href="#schedule"><span class="nav-no">01</span>일정</a>
-      <a href="#prizes"><span class="nav-no">02</span>상금</a>
-      <a href="#guide"><span class="nav-no">03</span>참가 안내</a>
+      <a href="#schedule">일정</a>
+      <a href="#prizes">상금</a>
+      <a href="#guide">참가 안내</a>
     </nav>
     <a data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank" rel="noopener noreferrer"
-      class="btn btn-sm btn-ink bar-cta">신청하기 <span class="dday" data-dday></span></a>
+      class="btn btn-sm btn-ink bar-cta">참가 신청</a>
     <span data-apply-closed hidden class="btn btn-sm btn-off bar-cta">신청 마감</span>
     <span class="bar-progress" aria-hidden="true"></span>
   </header>
@@ -87,18 +87,44 @@
   </div>
 
   <main class="story">
-    <!-- Intro: the name, the day, the place. On small screens it opens with a clear view of the 3D backdrop -->
+    <!-- Intro: the object, the name, one line. On small screens it opens with a clear view of the 3D backdrop -->
     <section id="intro" class="scene hero" data-scene="logo" data-frame="center" aria-labelledby="intro-title">
       <div class="scene-window" data-window aria-hidden="true"></div>
       <h1 id="intro-title" class="wordmark">
         <span class="mask"><span>EasyThon</span></span>
         <span class="mask wordmark-year"><span>2026</span></span>
       </h1>
-      <p class="hero-kicker">Easy + Marathon = EasyThon</p>
-      <p class="hero-hint" aria-hidden="true">드래그해서 돌려보세요</p>
-      <div class="hero-lead">
-        <p class="hero-statement wb-keep">누구나 쉽게<br>참여하는 해커톤</p>
-        <p class="hero-copy wb-keep">개발 경험이 적은 분부터 풍부한 분까지 모두 환영합니다. 아이디어만 있다면 함께 팀을 이루고 만들고 배우며 성장할 수 있는 열린 무대를 제공합니다.</p>
+      <p class="hero-line hero-tagline">누구나 쉽게 참여하는 해커톤</p>
+      <p class="hero-line hero-when"><span>2026.11.14 (토)</span><span>미디어센터 507호</span></p>
+    </section>
+
+    <!-- About: what it is, and everything needed to sign up -->
+    <section id="about" class="scene" data-scene="logo" data-frame="side" aria-labelledby="about-title">
+      <div class="scene-body">
+        <h2 id="about-title" class="statement wb-keep">개발 경험이 적은 분부터 풍부한 분까지 모두 환영합니다.</h2>
+        <p class="statement-body wb-keep">아이디어만 있다면 함께 팀을 이루고 만들고 배우며 성장할 수 있는 열린 무대를 제공합니다.</p>
+        <dl class="facts">
+          <div>
+            <dt>일시</dt>
+            <dd class="facts-pair"><span>2026.11.14 (토)</span> <span class="facts-aside" data-hours>09:00 – 19:00</span></dd>
+          </div>
+          <div>
+            <dt>장소</dt>
+            <dd>미디어센터 507호</dd>
+          </div>
+          <div>
+            <dt>참가비</dt>
+            <dd>무료</dd>
+          </div>
+          <div>
+            <dt>총 상금</dt>
+            <dd data-prize-total>270만원</dd>
+          </div>
+          <div>
+            <dt>해커톤 시작까지</dt>
+            <dd><span id="countdown-timer" class="countdown" role="timer"></span></dd>
+          </div>
+        </dl>
         <div id="apply" class="apply">
           <a data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank"
             rel="noopener noreferrer" class="btn btn-lg btn-ink">
@@ -116,31 +142,6 @@
           </p>
         </div>
       </div>
-      <dl class="hero-facts">
-        <div>
-          <dt>일시</dt>
-          <dd>2026.11.14 (토)</dd>
-        </div>
-        <div>
-          <dt>시간</dt>
-          <dd data-hours>09:00 – 19:00</dd>
-        </div>
-        <div>
-          <dt>장소</dt>
-          <dd>미디어센터 507호</dd>
-        </div>
-        <div>
-          <dt>참가비</dt>
-          <dd>무료</dd>
-        </div>
-      </dl>
-      <div class="hero-data">
-        <p class="hero-prize"><span class="label">총 상금</span><strong data-prize-total>270만원</strong></p>
-        <div class="countdown">
-          <p class="label">해커톤 시작까지</p>
-          <div id="countdown-timer" class="countdown-units" role="timer"></div>
-        </div>
-      </div>
     </section>
 
     <!-- Schedule: the scroll (or the pointer) steps through the day, and the dial on the stage turns with it.
@@ -149,7 +150,6 @@
       <div class="scene-pin">
         <div class="scene-body">
           <header class="chapter-head">
-            <p class="chapter-meta"><span>01</span><span>Schedule</span></p>
             <h2 id="schedule-title" class="chapter-title"><span class="mask"><span>일정</span></span></h2>
           </header>
           <ol class="milestones">
@@ -211,12 +211,11 @@
       </div>
     </section>
 
-    <!-- Prizes: scene.js builds the podium from data-amount (만원) and data-teams,
+    <!-- Prizes: scene.js builds the podium from data-amount (만원) and data-teams, and colours it after --tone;
          effects.js adds them up for the totals -->
     <section id="prizes" class="scene" data-scene="podium" data-frame="side" aria-labelledby="prizes-title">
       <div class="scene-body">
         <header class="chapter-head">
-          <p class="chapter-meta"><span>02</span><span>Prize</span></p>
           <h2 id="prizes-title" class="chapter-title"><span class="mask"><span>상금</span></span></h2>
         </header>
         <div class="total">
@@ -225,17 +224,17 @@
           <p class="total-note wb-keep">수상팀에게는 아래 상금이 지급됩니다</p>
         </div>
         <ol id="prize-list" class="prizes">
-          <li class="prize-row" data-amount="100" data-teams="1" style="--metal: #d6a531">
+          <li class="prize-row" data-amount="100" data-teams="1" style="--tone: var(--red)">
             <span class="prize-rank">대상</span>
             <span class="prize-amount">100<small>만원</small></span>
             <span class="prize-teams">1팀</span>
           </li>
-          <li class="prize-row" data-amount="70" data-teams="1" style="--metal: #a9b0ba">
+          <li class="prize-row" data-amount="70" data-teams="1" style="--tone: var(--ink)">
             <span class="prize-rank">최우수상</span>
             <span class="prize-amount">70<small>만원</small></span>
             <span class="prize-teams">1팀</span>
           </li>
-          <li class="prize-row" data-amount="50" data-teams="2" style="--metal: #b9763f">
+          <li class="prize-row" data-amount="50" data-teams="2" style="--tone: var(--porcelain)">
             <span class="prize-rank">우수상</span>
             <span class="prize-amount">50<small>만원</small></span>
             <span class="prize-teams">2팀 · 팀당</span>
@@ -248,7 +247,6 @@
     <section id="guide" class="scene" data-scene="laptop" data-frame="side" aria-labelledby="guide-title">
       <div class="scene-body">
         <header class="chapter-head">
-          <p class="chapter-meta"><span>03</span><span>Guide</span></p>
           <h2 id="guide-title" class="chapter-title"><span class="mask"><span>참가 안내</span></span></h2>
         </header>
         <div class="faq">
@@ -300,7 +298,10 @@
         <li><a href="https://www.instagram.com/dku_aegis" target="_blank" rel="noopener noreferrer" class="link">Instagram<svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" /></svg></a></li>
         <li><a href="https://github.com/dkuaegis" target="_blank" rel="noopener noreferrer" class="link">GitHub<svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" /></svg></a></li>
       </ul>
-      <p class="footer-copy">© 2026 EasyThon. Organized by Aegis. All rights reserved.</p>
+      <div class="footer-copy">
+        <p>Easy + Marathon = EasyThon</p>
+        <p>© 2026 EasyThon. Organized by Aegis. All rights reserved.</p>
+      </div>
     </div>
   </footer>
 
@@ -339,10 +340,7 @@
     const timerWrap = document.getElementById('countdown-timer');
     const rollDigits = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     function block(label) {
-      return `<div class="cd-unit">
-          <div class="cd-digits" data-role="digits"></div>
-          <div class="cd-label">${label}</div>
-        </div>`;
+      return `<span class="cd-unit"><span class="cd-digits" data-role="digits"></span><span class="cd-label">${label}</span></span>`;
     }
     function setDigits(el, text) {
       if (el.dataset.value === text) return;

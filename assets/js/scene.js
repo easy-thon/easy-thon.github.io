@@ -221,15 +221,15 @@
     const RED = color(0xe8402f);
     const DEEP_RED = color(0xa52617);
     const INK = color(0x2a1714);
-    const METALS = [
-      [color(0xc9961f), color(0xf3d27a)],
-      [color(0x9aa2ad), color(0xe9ecf0)],
-      [color(0xa45f2a), color(0xe2a46c)],
-    ];
-    const SLAB = [color(0x161616), color(0x262626)];
-    const BODY = [color(0xb3291a), color(0xe8402f)];
-    const DECK = color(0x1c1c1c);
-    const SCREEN = color(0x121212);
+    // each prize row's swatch (--tone) is the colour of its columns on the podium, a shade deeper at the foot
+    const TONES = prizeRows.map(el => {
+      const top = new THREE.Color(getComputedStyle(el).getPropertyValue('--tone').trim() || '#dcd9d2');
+      return [top.clone().multiplyScalar(0.8), top];
+    });
+    const SLAB = [color(0xcdc9c1), color(0xe4e1da)];
+    const BODY = [color(0x161616), color(0x2c2c2c)];
+    const DECK = color(0x3a3a3a);
+    const SCREEN = color(0x101010);
     const LINES = [color(0xe8402f), color(0xf3efe8), color(0xa52617), color(0x6b6a66)];
     // dial segments: sessions still to come are porcelain, those before the leading one are ink, the leading one red
     const AHEAD = [color(0xd8d5ce), color(0xf4f2ed)];
@@ -350,15 +350,14 @@
         columns.forEach((column, i) => {
           const hot = heat.podium[column.row];
           const tall = Math.max(0.5, (2.5 * column.amount) / top);
-          const metal = METALS[Math.min(column.row, METALS.length - 1)];
+          const [foot, head] = TONES[column.row];
           put(i, {
             at: [(i - (columns.length - 1) / 2) * 0.8, -1.28 + tall / 2 + 0.14 * hot, 0],
             turn: [0, 0, QUARTER],
             size: [tall, 0.66, 0.66],
-            metal: 0.55,
-            glow: 0.04 + 0.3 * hot,
-            from: metal[0],
-            to: metal[1],
+            glow: 0.2 * hot,
+            from: foot,
+            to: head,
           });
         });
         const base = columns.length;
@@ -612,7 +611,8 @@
       let open = 0;
       windows.forEach(([a, b]) => { open = Math.max(open, (Math.min(b, top + span) - Math.max(a, top)) / span); });
       const t = clamp(open, 0, 1);
-      return Math.max(lerp(0.26, 1, t * t * (3 - 2 * t)), lerp(0.26, 0.42, Math.sin(Math.PI * blend)));
+      // light enough behind text that the grey of the page's small print still reads against the darkest bars
+      return Math.max(lerp(0.18, 1, t * t * (3 - 2 * t)), lerp(0.18, 0.3, Math.sin(Math.PI * blend)));
     }
 
     // ----- Animation -----
