@@ -11,8 +11,8 @@
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --bar-h: 3.75rem;
-  /* small screens: the 3D stage is a strip pinned above the story */
-  --stage-h: 38svh;
+  /* small screens: the 3D stage is a compact strip pinned above the story */
+  --stage-h: 28svh;
 }
 
 html {
@@ -126,6 +126,12 @@ body.font-sans {
   transform: translateX(-50%);
 }
 
+@media (max-width: 1023px) {
+  .tabs {
+    top: calc(var(--stage-h) - 2.9rem);
+  }
+}
+
 .tab {
   position: relative;
   padding: 0.4rem 0.85rem;
@@ -218,6 +224,12 @@ body.font-sans {
   padding: 0 1.25rem;
   overflow-x: clip;
   counter-reset: scene;
+}
+
+@media (max-width: 1023px) {
+  .story {
+    padding-bottom: 5.5rem;
+  }
 }
 
 .scene {
@@ -318,6 +330,14 @@ body.font-sans {
   touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
+}
+
+@media (max-width: 1023px) {
+  .stage {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(180deg, var(--bg) 0%, rgba(3, 4, 22, 0.98) 100%);
+  }
 }
 
 .stage.is-live {
