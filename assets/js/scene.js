@@ -1,8 +1,10 @@
 // EasyThon 2026: the 3D stage.
 // Seven bars re-form for every scene of the story: the E mark, a dial of the day's schedule,
 // the prize podium and a laptop. The dial and the podium are built from the lists on the page,
-// so editing the HTML reshapes them. Beside the story on wide screens the model can be turned
-// by hand; on small ones it is the page's backdrop. It is fitted to .stage-frame either way.
+// so editing the HTML reshapes them. The canvas is fixed to the viewport and the model is fitted to
+// the frame each scene names (data-frame): centre stage in the intro, beside the story after it, and
+// it travels between them as it changes shape. On wide screens it can be turned by hand; on small
+// ones both frames are one band at the top and the model is the page's backdrop.
 // three.js is lazy-loaded from the CDN; without WebGL the flat mark in the stage stays.
 //
 // Events on document (the other end is in effects.js):
@@ -48,14 +50,16 @@
     camera.position.z = CAM_Z;
     const viewH = 2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * CAM_Z;
 
-    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
-    sun.position.set(-2.5, 4, 6);
+    // a high-key studio for a paper page: a key from the upper left, and the sky and floor in the colour of the page
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(-3, 5, 6);
     scene.add(sun);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd9d4c8, 0.6));
 
     // ----- Reflections: a soft studio of light panels, baked once -----
     function buildEnvironment() {
       const studio = new THREE.Scene();
-      studio.background = new THREE.Color(0x0d0d10);
+      studio.background = new THREE.Color(0xd6d3cb);
       const panel = (w, h, hex, power, x, y, z) => {
         const mesh = new THREE.Mesh(
           new THREE.PlaneGeometry(w, h),
@@ -65,11 +69,11 @@
         mesh.lookAt(0, 0, 0);
         studio.add(mesh);
       };
-      panel(16, 16, 0xffffff, 1.6, 0, 9, 2);
-      panel(8, 10, 0xffffff, 2.6, -7, 3, 6);
-      panel(6, 10, 0xff4d4d, 2.2, 8, 1, -2);
-      panel(6, 10, 0x450a0a, 1.8, -8, -1, -5);
-      panel(12, 6, 0xffffff, 0.5, 0, -3, 9);
+      panel(16, 16, 0xffffff, 1.8, 0, 9, 2);
+      panel(8, 10, 0xffffff, 2.4, -7, 3, 6);
+      panel(6, 10, 0xffffff, 1.1, 8, 1, -2);
+      panel(8, 10, 0x6b675f, 1.0, -8, -1, -5);
+      panel(12, 6, 0xf2efe8, 0.9, 0, -3, 9);
       const pmrem = new THREE.PMREMGenerator(renderer);
       const old = scene.environment;
       // three's own blur shader trips a harmless HLSL precision warning on Windows; keep the console clean
@@ -150,10 +154,10 @@
     geometry.setAttribute('aFx', fxAttr);
 
     const material = new THREE.MeshPhysicalMaterial({
-      roughness: 0.32,
-      clearcoat: 0.6,
-      clearcoatRoughness: 0.3,
-      envMapIntensity: 0.9,
+      roughness: 0.46,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.42,
+      envMapIntensity: 0.85,
     });
     material.onBeforeCompile = shader => {
       shader.vertexShader = shader.vertexShader
@@ -191,7 +195,7 @@
         .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
           metalnessFactor = mix(metalnessFactor, 1.0, vFx.y);`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-          totalEmissiveRadiance += vTint * (0.06 + vFx.x);`);
+          totalEmissiveRadiance += vTint * (0.02 + vFx.x);`);
     };
     const mesh = new THREE.InstancedMesh(geometry, material, COUNT);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -214,27 +218,27 @@
     }));
 
     const color = hex => new THREE.Color(hex);
-    const RED = color(0xef4444);
-    const DEEP_RED = color(0x991b1b);
-    const BLACK = color(0x09090b);
+    const RED = color(0xe8402f);
+    const DEEP_RED = color(0xa52617);
+    const INK = color(0x2a1714);
     const METALS = [
-      [color(0xd99a1c), color(0xffd56b)],
-      [color(0xa9b4c6), color(0xf3f6fb)],
-      [color(0xa8642c), color(0xe9a66b)],
+      [color(0xc9961f), color(0xf3d27a)],
+      [color(0x9aa2ad), color(0xe9ecf0)],
+      [color(0xa45f2a), color(0xe2a46c)],
     ];
-    const SLAB = [color(0x18181b), color(0x2c2c32)];
-    const BODY = [color(0x991b1b), color(0xef4444)];
-    const DECK = color(0x18181b);
-    const SCREEN = color(0x09090b);
-    const LINES = [color(0xef4444), color(0xfca5a5), color(0x7f1d1d), color(0x52525b)];
-    // dial segments: sessions still to come are graphite, those before the leading one are done
-    const AHEAD = [color(0x2a2a30), color(0x404048)];
-    const DONE = [color(0x5c1313), color(0x7f1d1d)];
-    const LIT = color(0xf87171);
-    // the object gradient, red through deep red to black
+    const SLAB = [color(0x161616), color(0x262626)];
+    const BODY = [color(0xb3291a), color(0xe8402f)];
+    const DECK = color(0x1c1c1c);
+    const SCREEN = color(0x121212);
+    const LINES = [color(0xe8402f), color(0xf3efe8), color(0xa52617), color(0x6b6a66)];
+    // dial segments: sessions still to come are porcelain, those before the leading one are ink, the leading one red
+    const AHEAD = [color(0xd8d5ce), color(0xf4f2ed)];
+    const DONE = [color(0x161616), color(0x2b2b2b)];
+    const LIT = color(0xff6a54);
+    // the object gradient, signal red through deep red to a red-black
     const ramp = (u, out) => (u < 0.5
       ? out.lerpColors(RED, DEEP_RED, clamp(u * 2, 0, 1))
-      : out.lerpColors(DEEP_RED, BLACK, clamp(u * 2 - 1, 0, 1)));
+      : out.lerpColors(DEEP_RED, INK, clamp(u * 2 - 1, 0, 1) * 0.6));
 
     const euler = new THREE.Euler();
     const reach = new THREE.Vector3();
@@ -402,17 +406,18 @@
     // ----- Layout: every scene of the story holds one shape -----
     const sceneEls = [...document.querySelectorAll('.scene[data-scene]')];
     const windowEls = [...document.querySelectorAll('[data-window]')];
-    const frameEl = stage.querySelector('.stage-frame');
+    const frameEls = [...stage.querySelectorAll('[data-frame]')];
+    const footer = document.getElementById('footer');
     let keys = [];
     let windows = [];   // small screens: [top, bottom] of each clear view of the stage, in page pixels
     let vh = window.innerHeight;
     let narrow = !wide.matches;
     let width = 1;
     let height = 1;
-    let frame = { top: 0, height: 1 };   // the box the model is fitted to, in stage pixels
-    let fit = 1;     // model scale that fits the frame
-    let shiftX = 0;  // and where the frame's centre is, in world units from the stage's
-    let lift = 0;
+    // per frame: the model scale that fits it, where its centre is in world units from the stage's,
+    // and its top and height in stage pixels
+    const placements = {};
+    const frameOf = name => placements[name] || placements.side || { fit: 1, x: 0, y: 0, top: 0, height: 1 };
     let sized = '';
 
     function measure() {
@@ -428,7 +433,7 @@
         let a = narrow ? top - vh * 0.35 : top;
         let b = top + box.height - vh * (narrow ? 0.75 : 1);
         if (b < a) a = b = (a + b) / 2;
-        return { a, b, shape: el.dataset.scene };
+        return { a, b, shape: el.dataset.scene, frame: el.dataset.frame || 'side' };
       });
       windows = narrow
         ? windowEls.map(el => {
@@ -460,15 +465,23 @@
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       }
-      // the model is fitted to the frame and centred on it; the labels in the frame are centred by CSS
+      // the model is fitted to each frame and centred on it; what a frame holds is centred on it by CSS
       const room = stage.getBoundingClientRect();
-      const box = frameEl ? frameEl.getBoundingClientRect() : room;
-      frame = { top: box.top - room.top, height: box.height || h };
       const unit = viewH / h;   // world units per pixel where the model stands
-      fit = ((narrow ? 0.9 : 0.8) * Math.min(box.width || w, frame.height) * unit) / 3.9;
-      shiftX = (box.left - room.left + (box.width || w) / 2 - w / 2) * unit;
-      lift = (h / 2 - frame.top - frame.height / 2) * unit;
-      stage.style.setProperty('--u', `${(fit / unit).toFixed(1)}px`);
+      frameEls.forEach(el => {
+        const box = el.getBoundingClientRect();
+        const fw = box.width || w;
+        const fh = box.height || h;
+        placements[el.dataset.frame] = {
+          fit: ((narrow ? 0.9 : 0.82) * Math.min(fw, fh) * unit) / 3.9,
+          x: (box.left - room.left + fw / 2 - w / 2) * unit,
+          y: (h / 2 - (box.top - room.top) - fh / 2) * unit,
+          top: box.top - room.top,
+          height: fh,
+        };
+      });
+      // the labels on the dial and the podium are sized to the frame beside the story
+      stage.style.setProperty('--u', `${(frameOf('side').fit / unit).toFixed(1)}px`);
       measure();
     }
 
@@ -492,6 +505,10 @@
     let lookGoalY = 0;
     let dirty = true;
     let movedAt = 0;   // last scroll, resize or pointer move
+    let assembled = reduceMotion ? 1 : 0;   // 0..1: the bars fly together into the first shape
+    let liveAt = 0;                          // when the stage first went live
+    let covered = false;                     // the footer is over the whole stage
+    const checkCovered = () => { covered = !!footer && footer.getBoundingClientRect().top <= 0; };
 
     document.addEventListener('stage:focus', e => {
       const { group, index } = e.detail;
@@ -589,12 +606,13 @@
     // small screens: the model shows in full while nothing covers the middle of the frame, dims to a backdrop
     // while the story runs over it, and comes up part way while it changes shape (blend 0..1)
     function veil(blend) {
+      const frame = frameOf('center');
       const top = window.scrollY + frame.top + frame.height * 0.2;
       const span = frame.height * 0.6;
       let open = 0;
       windows.forEach(([a, b]) => { open = Math.max(open, (Math.min(b, top + span) - Math.max(a, top)) / span); });
       const t = clamp(open, 0, 1);
-      return Math.max(lerp(0.3, 1, t * t * (3 - 2 * t)), lerp(0.3, 0.46, Math.sin(Math.PI * blend)));
+      return Math.max(lerp(0.26, 1, t * t * (3 - 2 * t)), lerp(0.26, 0.42, Math.sin(Math.PI * blend)));
     }
 
     // ----- Animation -----
@@ -606,12 +624,16 @@
     const RIGHT = new THREE.Vector3(1, 0, 0);
     const matrix = new THREE.Matrix4();
     const ONE = new THREE.Vector3(1, 1, 1);
+    const placed = new THREE.Vector3();
+    const outQuart = t => 1 - Math.pow(1 - t, 4);
 
     function update(dt) {
       if (!reduceMotion) time += dt;
+      // by the clock, not the frame count, so a slow device assembles as quickly (if less smoothly)
+      if (assembled < 1) assembled = clamp((performance.now() - liveAt) / 1800, 0, 1);
 
-      // where the scroll is between two scenes
-      scrollY = reduceMotion ? window.scrollY : damp(scrollY, window.scrollY, 10, dt);
+      // where the scroll is between two scenes (Lenis already eases the scroll itself)
+      scrollY = reduceMotion ? window.scrollY : damp(scrollY, window.scrollY, window.lenis ? 24 : 10, dt);
       let i = 0;
       while (i < keys.length - 1 && scrollY >= keys[i + 1].a) i++;
       const a = keys[i];
@@ -644,8 +666,13 @@
         bar.from.lerpColors(from.from, to.from, t);
         bar.to.lerpColors(from.to, to.to, t);
 
-        mesh.setMatrixAt(k, matrix.compose(bar.at, bar.turn, ONE));
-        shapeAttr.setXYZW(k, bar.size.x, bar.size.y, bar.size.z, Math.min(bar.round, bar.size.x / 2, bar.size.y / 2, bar.size.z / 2));
+        // on first show each bar grows out of its own centre, one after another, and rises into place
+        const grow = assembled < 1 ? outQuart(clamp(assembled * 1.7 - (k / (COUNT - 1)) * 0.7, 0, 1)) : 1;
+        placed.copy(bar.at);
+        placed.y -= (1 - grow) * 0.9;
+        mesh.setMatrixAt(k, matrix.compose(placed, bar.turn, ONE));
+        const length = Math.max(0.001, bar.size.x * grow);
+        shapeAttr.setXYZW(k, length, bar.size.y, bar.size.z, Math.min(bar.round, length / 2, bar.size.y / 2, bar.size.z / 2));
         bendAttr.setX(k, bar.bend);
         fromAttr.setXYZ(k, bar.from.r, bar.from.g, bar.from.b);
         toAttr.setXYZ(k, bar.to.r, bar.to.g, bar.to.b);
@@ -672,11 +699,16 @@
       viewA.setFromEuler(euler.set(ax, ay, az));
       viewB.setFromEuler(euler.set(bx, by, bz));
       model.quaternion.slerpQuaternions(viewA, viewB, eased);
-      turnY.setFromAxisAngle(UP, eased * TAU + yaw + lookX * 0.14 + sway * swing);
+      // the first show also swings the model round to face the viewer
+      const entrance = (1 - outQuart(assembled)) * -1.4;
+      turnY.setFromAxisAngle(UP, eased * TAU + yaw + lookX * 0.14 + sway * swing + entrance);
       turnX.setFromAxisAngle(RIGHT, pitch - lookY * 0.08 + sway * Math.sin(time * 0.37) * 0.035);
       model.quaternion.premultiply(turnY).premultiply(turnX);
-      model.position.set(shiftX, lift + sway * Math.sin(time * 0.8) * 0.05, 0);
-      model.scale.setScalar(fit);
+      // and it travels from one frame to the other as it changes shape
+      const fa = frameOf(a ? a.frame : 'center');
+      const fb = frameOf(b ? b.frame : 'center');
+      model.position.set(lerp(fa.x, fb.x, eased), lerp(fa.y, fb.y, eased) + sway * Math.sin(time * 0.8) * 0.05, 0);
+      model.scale.setScalar(lerp(fa.fit, fb.fit, eased));
       model.updateMatrixWorld();
 
       // what the overlays in the stage should show, and how far the backdrop is dimmed
@@ -723,14 +755,14 @@
     let visible = true;
     function tick(now) {
       raf = requestAnimationFrame(tick);
-      // nothing to draw into yet, scrolled out of view, or (reduced motion) nothing has changed
-      if (!sized || !visible || (reduceMotion && !dirty)) {
+      // nothing to draw into yet, out of view or under the footer, or (reduced motion) nothing has changed
+      if (!sized || !visible || covered || (reduceMotion && !dirty)) {
         last = now;
         return;
       }
       const delta = (now - last) / 1000;
       // a backdrop on a page that is standing still only sways, which half the frames carry just as well
-      const idle = narrow && now - movedAt > 600;
+      const idle = narrow && assembled >= 1 && now - movedAt > 600;
       if (idle && delta < 1 / 34) return;
       last = now;
       dirty = false;
@@ -740,6 +772,8 @@
     }
     function run() {
       resize();
+      checkCovered();
+      if (!liveAt) liveAt = performance.now();
       scrollY = window.scrollY;
       step = stepGoal;
       stage.classList.add('is-live');
@@ -758,6 +792,7 @@
     window.addEventListener('scroll', () => {
       dirty = true;
       movedAt = performance.now();
+      checkCovered();
     }, { passive: true });
     if ('ResizeObserver' in window) {
       // the stage changes size with the layout; the page changes height with its fonts
