@@ -1,7 +1,8 @@
 // EasyThon 2026: the 3D stage.
-// Seven rounded bars re-form for every scene of the story: the E mark, a dial of the day's
-// schedule, the prize podium, a laptop, and arrows toward the apply button. The dial and
-// the podium are built from the lists on the page, so editing the HTML reshapes them.
+// Seven bars re-form for every scene of the story: the E mark, a dial of the day's schedule,
+// the prize podium and a laptop. The dial and the podium are built from the lists on the page,
+// so editing the HTML reshapes them. Beside the story on wide screens the model can be turned
+// by hand; on small ones it is the page's backdrop. It is fitted to .stage-frame either way.
 // three.js is lazy-loaded from the CDN; without WebGL the flat mark in the stage stays.
 //
 // Events on document (the other end is in effects.js):
@@ -54,7 +55,7 @@
     // ----- Reflections: a soft studio of light panels, baked once -----
     function buildEnvironment() {
       const studio = new THREE.Scene();
-      studio.background = new THREE.Color(0x080b2e);
+      studio.background = new THREE.Color(0x0d0d10);
       const panel = (w, h, hex, power, x, y, z) => {
         const mesh = new THREE.Mesh(
           new THREE.PlaneGeometry(w, h),
@@ -221,11 +222,15 @@
       [color(0xa9b4c6), color(0xf3f6fb)],
       [color(0xa8642c), color(0xe9a66b)],
     ];
-    const SLAB = [color(0x09090b), color(0x991b1b)];
+    const SLAB = [color(0x18181b), color(0x2c2c32)];
     const BODY = [color(0x991b1b), color(0xef4444)];
     const DECK = color(0x18181b);
     const SCREEN = color(0x09090b);
     const LINES = [color(0xef4444), color(0xfca5a5), color(0x7f1d1d), color(0x52525b)];
+    // dial segments: sessions still to come are graphite, those before the leading one are done
+    const AHEAD = [color(0x2a2a30), color(0x404048)];
+    const DONE = [color(0x5c1313), color(0x7f1d1d)];
+    const LIT = color(0xf87171);
     // the object gradient, red through deep red to black
     const ramp = (u, out) => (u < 0.5
       ? out.lerpColors(RED, DEEP_RED, clamp(u * 2, 0, 1))
@@ -318,6 +323,7 @@
           const hot = heat.clock[i];
           const phi = mids[i] + turned;
           const out = RING + 0.16 * hot;
+          const done = clamp(lead - i, 0, 1);
           basis.makeBasis(axisX.set(Math.cos(phi), -Math.sin(phi), 0), axisY, axisZ.set(Math.sin(phi), Math.cos(phi), 0));
           put(i, {
             at: [out * Math.sin(phi), out * Math.cos(phi), 0.24 * hot],
@@ -325,10 +331,10 @@
             size: [span * perMinute * RING, 0.44, 0.46],
             round: 0.05,
             bend: 1 / RING,
-            glow: 0.55 * hot,
-            // the rest of the day sits back so the leading session reads at a glance
-            from: ramp(i / spans.length, tintA).multiplyScalar(0.5 + 0.5 * hot),
-            to: ramp((i + 1) / spans.length, tintB).multiplyScalar(0.5 + 0.5 * hot),
+            glow: 0.5 * hot,
+            // only the leading session is lit, so it reads at a glance
+            from: tintA.lerpColors(AHEAD[0], DONE[0], done).lerp(RED, hot),
+            to: tintB.lerpColors(AHEAD[1], DONE[1], done).lerp(LIT, hot),
           });
         });
         for (let i = spans.length; i < COUNT; i++) tuck(i, 0);
@@ -379,29 +385,6 @@
         });
         for (let i = 7; i < COUNT; i++) tuck(i, 0);
       },
-
-      // three chevrons, with a pulse running toward the apply button
-      arrow() {
-        const slant = 0.74;
-        const length = 1.3;
-        const thick = 0.42;
-        const arm = length / 2 - thick / 2;
-        for (let chevron = 0; chevron < 3; chevron++) {
-          const tip = -1.43 + chevron * 0.95;
-          const beat = 0.5 + 0.5 * Math.sin(time * 3.2 + chevron * 1.1);
-          [1, -1].forEach((side, k) => {
-            const i = chevron * 2 + k;
-            put(i, {
-              at: [tip + Math.cos(slant) * arm, side * Math.sin(slant) * arm, 0],
-              turn: [0, 0, side * slant],
-              size: [length, thick, thick],
-              glow: 0.05 + 0.4 * beat,
-            });
-            paint(i);
-          });
-        }
-        for (let i = 6; i < COUNT; i++) tuck(i, 2);
-      },
     };
 
     // how each shape is turned toward the viewer: pitch, yaw, roll
@@ -409,8 +392,6 @@
       if (name === 'clock') return [-0.62, -0.18, 0];
       if (name === 'podium') return [0.2, -0.52, 0];
       if (name === 'laptop') return [0.42, -0.6, 0];
-      // the chevrons point at the apply button: to the left beside the story, down above it
-      if (name === 'arrow') return [0.08, -0.3, narrow ? QUARTER : 0];
       return [0.1, -0.5, 0];
     };
     const shape = (bars, name) => {
@@ -420,31 +401,41 @@
 
     // ----- Layout: every scene of the story holds one shape -----
     const sceneEls = [...document.querySelectorAll('.scene[data-scene]')];
-    const topbar = document.getElementById('topbar');
+    const windowEls = [...document.querySelectorAll('[data-window]')];
+    const frameEl = stage.querySelector('.stage-frame');
     let keys = [];
+    let windows = [];   // small screens: [top, bottom] of each clear view of the stage, in page pixels
     let vh = window.innerHeight;
     let narrow = !wide.matches;
     let width = 1;
     let height = 1;
-    let fit = 1;     // model scale that fits the stage
-    let lift = 0;    // how far up the model sits, to stay clear of the top bar
+    let frame = { top: 0, height: 1 };   // the box the model is fitted to, in stage pixels
+    let fit = 1;     // model scale that fits the frame
+    let shiftX = 0;  // and where the frame's centre is, in world units from the stage's
+    let lift = 0;
     let sized = '';
 
     function measure() {
       vh = window.innerHeight;
       narrow = !wide.matches;
-      // where the stage is pinned across the top, a scene is read in the area under it
-      const shade = narrow ? stage.offsetHeight : 0;
       const end = Math.max(0, document.documentElement.scrollHeight - vh);
       keys = sceneEls.map(el => {
         const box = el.getBoundingClientRect();
         const top = box.top + window.scrollY;
-        // the scroll range over which this scene fills the readable area
-        let a = top - shade;
-        let b = top + box.height - vh;
+        // the scroll range over which this scene holds its shape: beside the story, while the scene fills the
+        // screen; behind it, while the scene is being read, so the shape changes as the next heading crosses
+        // the middle of the screen (where effects.js moves the nav on to it)
+        let a = narrow ? top - vh * 0.35 : top;
+        let b = top + box.height - vh * (narrow ? 0.75 : 1);
         if (b < a) a = b = (a + b) / 2;
         return { a, b, shape: el.dataset.scene };
       });
+      windows = narrow
+        ? windowEls.map(el => {
+          const box = el.getBoundingClientRect();
+          return [box.top + window.scrollY, box.bottom + window.scrollY];
+        })
+        : [];
       if (!keys.length) return;
       keys[0].a = Math.min(keys[0].a, 0);
       keys[0].b = Math.max(keys[0].b, 0);
@@ -457,6 +448,7 @@
       const w = stage.clientWidth;
       const h = stage.clientHeight;
       if (!w || !h) return;
+      narrow = !wide.matches;
       dpr = Math.max(0.75, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(maxPixels / (w * h))) * quality);
       const next = `${w}x${h}@${dpr}`;
       if (next !== sized) {
@@ -468,13 +460,15 @@
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
       }
-      // keep clear of the top bar, and of the tabs that hang from the stage on small screens
-      // (there the stage is short, so the model may reach a little way under both)
-      const above = (topbar ? topbar.offsetHeight : 0) * (wide.matches ? 1 : 0.6);
-      const below = wide.matches ? 0 : 24;
-      fit = ((wide.matches ? 0.78 : 0.9) * Math.min(viewH * camera.aspect, (viewH * (h - above - below)) / h)) / 3.9;
-      lift = (((below - above) / 2) * viewH) / h;
-      stage.style.setProperty('--lift', `${(above - below) / 2}px`);
+      // the model is fitted to the frame and centred on it; the labels in the frame are centred by CSS
+      const room = stage.getBoundingClientRect();
+      const box = frameEl ? frameEl.getBoundingClientRect() : room;
+      frame = { top: box.top - room.top, height: box.height || h };
+      const unit = viewH / h;   // world units per pixel where the model stands
+      fit = ((narrow ? 0.9 : 0.8) * Math.min(box.width || w, frame.height) * unit) / 3.9;
+      shiftX = (box.left - room.left + (box.width || w) / 2 - w / 2) * unit;
+      lift = (h / 2 - frame.top - frame.height / 2) * unit;
+      stage.style.setProperty('--u', `${(fit / unit).toFixed(1)}px`);
       measure();
     }
 
@@ -482,7 +476,7 @@
     const shapeA = makeBars();
     const shapeB = makeBars();
     const bars = makeBars();
-    const weight = { logo: 0, clock: 0, podium: 0, laptop: 0, arrow: 0 };
+    const weight = { logo: 0, clock: 0, podium: 0, laptop: 0 };
     let scrollY = window.scrollY;
     let stepGoal = Number(stage.dataset.step) || 0;   // schedule row in focus on the page
     let hotRow = null;                                // prize row in focus on the page
@@ -497,12 +491,14 @@
     let lookGoalX = 0;
     let lookGoalY = 0;
     let dirty = true;
+    let movedAt = 0;   // last scroll, resize or pointer move
 
     document.addEventListener('stage:focus', e => {
       const { group, index } = e.detail;
       if (group === 'clock' && index !== null) stepGoal = index;
       if (group === 'podium') hotRow = index;
       dirty = true;
+      movedAt = performance.now();
     });
     const emit = (group, index) => {
       document.dispatchEvent(new CustomEvent('stage:hover', { detail: { group, index } }));
@@ -590,6 +586,17 @@
       stage.style.setProperty(name, text);
     };
 
+    // small screens: the model shows in full while nothing covers the middle of the frame, dims to a backdrop
+    // while the story runs over it, and comes up part way while it changes shape (blend 0..1)
+    function veil(blend) {
+      const top = window.scrollY + frame.top + frame.height * 0.2;
+      const span = frame.height * 0.6;
+      let open = 0;
+      windows.forEach(([a, b]) => { open = Math.max(open, (Math.min(b, top + span) - Math.max(a, top)) / span); });
+      const t = clamp(open, 0, 1);
+      return Math.max(lerp(0.3, 1, t * t * (3 - 2 * t)), lerp(0.3, 0.46, Math.sin(Math.PI * blend)));
+    }
+
     // ----- Animation -----
     const viewA = new THREE.Quaternion();
     const viewB = new THREE.Quaternion();
@@ -658,26 +665,29 @@
       lookY = damp(lookY, lookGoalY, 4, dt);
       const eased = inOut(blend);
       const sway = reduceMotion ? 0 : 1;
+      // behind the story nobody turns it by hand, so it swings wider on its own
+      const swing = narrow ? Math.sin(time * 0.32) * 0.3 : Math.sin(time * 0.5) * 0.1;
       const [ax, ay, az] = view(a ? a.shape : 'logo');
       const [bx, by, bz] = view(b ? b.shape : 'logo');
       viewA.setFromEuler(euler.set(ax, ay, az));
       viewB.setFromEuler(euler.set(bx, by, bz));
       model.quaternion.slerpQuaternions(viewA, viewB, eased);
-      turnY.setFromAxisAngle(UP, eased * TAU + yaw + lookX * 0.14 + sway * Math.sin(time * 0.5) * 0.1);
+      turnY.setFromAxisAngle(UP, eased * TAU + yaw + lookX * 0.14 + sway * swing);
       turnX.setFromAxisAngle(RIGHT, pitch - lookY * 0.08 + sway * Math.sin(time * 0.37) * 0.035);
       model.quaternion.premultiply(turnY).premultiply(turnX);
-      model.position.y = lift + sway * Math.sin(time * 0.8) * 0.05;
+      model.position.set(shiftX, lift + sway * Math.sin(time * 0.8) * 0.05, 0);
       model.scale.setScalar(fit);
       model.updateMatrixWorld();
 
-      // what the overlays in the stage should show
+      // what the overlays in the stage should show, and how far the backdrop is dimmed
+      setVar('--show', narrow ? veil(blend) : 1);
       for (const name in weight) weight[name] = 0;
       if (a) weight[a.shape in weight ? a.shape : 'logo'] += 1 - blend;
       if (b) weight[b.shape in weight ? b.shape : 'logo'] += blend;
       setVar('--clock', clamp((weight.clock - 0.75) / 0.25, 0, 1));
       const podium = clamp((weight.podium - 0.75) / 0.25, 0, 1);
       setVar('--podium', podium);
-      if (podium > 0) {
+      if (podium > 0 && !narrow) {
         columns.forEach((column, k) => {
           const bar = bars[k];
           point.set(bar.size.x / 2 + 0.16, 0, 0).applyQuaternion(bar.turn).add(bar.at);
@@ -713,14 +723,20 @@
     let visible = true;
     function tick(now) {
       raf = requestAnimationFrame(tick);
-      const delta = (now - last) / 1000;
-      last = now;
       // nothing to draw into yet, scrolled out of view, or (reduced motion) nothing has changed
-      if (!sized || !visible || (reduceMotion && !dirty)) return;
+      if (!sized || !visible || (reduceMotion && !dirty)) {
+        last = now;
+        return;
+      }
+      const delta = (now - last) / 1000;
+      // a backdrop on a page that is standing still only sways, which half the frames carry just as well
+      const idle = narrow && now - movedAt > 600;
+      if (idle && delta < 1 / 34) return;
+      last = now;
       dirty = false;
       update(Math.min(delta, 0.05));
       renderer.render(scene, camera);
-      watchFrameRate(delta);
+      if (!idle) watchFrameRate(delta);
     }
     function run() {
       resize();
@@ -736,9 +752,13 @@
     const refresh = () => {
       resize();
       dirty = true;
+      movedAt = performance.now();
     };
     window.addEventListener('resize', refresh);
-    window.addEventListener('scroll', () => { dirty = true; }, { passive: true });
+    window.addEventListener('scroll', () => {
+      dirty = true;
+      movedAt = performance.now();
+    }, { passive: true });
     if ('ResizeObserver' in window) {
       // the stage changes size with the layout; the page changes height with its fonts
       new ResizeObserver(refresh).observe(stage);
@@ -764,6 +784,7 @@
     });
     stage.addEventListener('pointermove', e => {
       dirty = true;
+      movedAt = performance.now();
       if (dragging) {
         yaw += (e.clientX - lastX) * 0.008;
         pitch = clamp(pitch + (e.clientY - lastY) * 0.006, -0.9, 0.9);

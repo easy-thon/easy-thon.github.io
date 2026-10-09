@@ -1,5 +1,5 @@
 // EasyThon 2026, page behaviour: which scene is on screen, the schedule stepper, live dates,
-// and the link between the lists and the 3D stage (assets/js/scene.js).
+// the apply dock, and the link between the lists and the 3D stage (assets/js/scene.js).
 //
 // The two files only talk through events on document:
 //   stage:focus  { group, index }   a list row is in focus         (this file -> scene.js)
@@ -8,14 +8,12 @@
 (() => {
   const root = document.documentElement;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const wide = window.matchMedia('(min-width: 1024px)');
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-  const stage = document.getElementById('stage');
   const topbar = document.getElementById('topbar');
-  const bar = document.getElementById('scroll-progress');
+  const stage = document.getElementById('stage');
   const scenes = [...document.querySelectorAll('.scene')];
-  const tabs = [...document.querySelectorAll('.tab')];
+  const tabs = [...document.querySelectorAll('.nav a')];
 
   const focusStage = (group, index) => {
     document.dispatchEvent(new CustomEvent('stage:focus', { detail: { group, index } }));
@@ -39,8 +37,10 @@
     const minutes = span % 60;
     row.querySelector('.tl-span').textContent = [hours && `${hours}시간`, minutes && `${minutes}분`].filter(Boolean).join(' ');
   });
-  const hoursEl = document.querySelector('[data-hours]');
-  if (hoursEl && rows.length) hoursEl.textContent = `${rows[0].dataset.time} – ${rows[rows.length - 1].dataset.time}`;
+  if (rows.length) {
+    const hours = `${rows[0].dataset.time} – ${rows[rows.length - 1].dataset.time}`;
+    document.querySelectorAll('[data-hours]').forEach(el => { el.textContent = hours; });
+  }
 
   let scrollStep = 0;     // where the scroll position is in the day
   let rowStep = null;     // a row under the pointer
@@ -121,6 +121,7 @@
     if (left > 0) return `D-${left}`;
     return left === 0 ? 'D-DAY' : '';
   };
+  const track = document.querySelector('.milestones');
   const milestones = [...document.querySelectorAll('.milestone')].map(el => {
     const badge = document.createElement('span');
     badge.className = 'dday';
@@ -135,6 +136,8 @@
       m.el.classList.toggle('is-next', m === next);
       m.badge.textContent = m === next ? dday(m.date) : '';
     });
+    // the track is drawn up to the next stop
+    if (track) track.style.setProperty('--done', next ? milestones.indexOf(next) : milestones.length - 1);
     const deadline = milestones.find(m => m.name === 'apply');
     if (deadline) document.querySelectorAll('[data-dday]').forEach(el => { el.textContent = dday(deadline.date); });
 
@@ -153,7 +156,7 @@
   refreshDates();
   setInterval(refreshDates, 60000);
 
-  // ----- Scroll: progress bar, current scene, schedule step -----
+  // ----- Scroll: progress, current scene, schedule step -----
   let pinned = false;
   let current = '';
   let ticking = false;
@@ -162,11 +165,13 @@
     const y = window.scrollY;
     const vh = window.innerHeight;
     const max = root.scrollHeight - vh;
-    if (bar) bar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1) : 0);
-    if (topbar) topbar.classList.toggle('is-scrolled', y > 24);
+    if (topbar) {
+      topbar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1).toFixed(4) : 0);
+      topbar.classList.toggle('is-scrolled', y > 8);
+    }
 
-    // where the stage is pinned across the top, the readable area starts under it
-    const shade = wide.matches || !stage ? 0 : Math.max(0, stage.getBoundingClientRect().bottom);
+    // the readable area starts under the top bar
+    const shade = topbar ? topbar.offsetHeight : 0;
     const line = shade + (vh - shade) * 0.45;
 
     let scene = scenes[0];
@@ -179,7 +184,6 @@
         else tab.removeAttribute('aria-current');
       });
       if (current === 'prizes') countUp();
-      document.body.classList.toggle('is-apply-visible', current !== 'intro');
     }
 
     if (!rows.length) return;
@@ -216,16 +220,26 @@
   layout();
   update();
 
-  // ----- Scenes rise into place the first time they scroll in (see style.css) -----
+  // ----- Small screens: the apply button docks to the bottom whenever the one in the intro is out of sight -----
+  const apply = document.getElementById('apply');
+  if (apply && 'IntersectionObserver' in window) {
+    // under the top bar counts as out of sight
+    new IntersectionObserver(([entry]) => {
+      document.body.classList.toggle('is-docked', !entry.isIntersecting);
+    }, { rootMargin: `-${topbar ? topbar.offsetHeight : 0}px 0px 0px 0px` }).observe(apply);
+  }
+
+  // ----- Scenes rise into place the first time their text scrolls in (see style.css) -----
+  // The text, not the scene: a scene's padding (or, in the intro on small screens, its view of the stage) comes first.
   if (!reduceMotion && 'IntersectionObserver' in window) {
     root.classList.add('reveal-on');
     const io = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-seen');
+        entry.target.closest('.scene').classList.add('is-seen');
         io.unobserve(entry.target);
       });
-    }, { rootMargin: '0px 0px -18% 0px' });
-    scenes.forEach(scene => io.observe(scene));
+    }, { rootMargin: '0px 0px -12% 0px' });
+    scenes.forEach(scene => io.observe(scene.querySelector('.scene-body')));
   }
 })();
