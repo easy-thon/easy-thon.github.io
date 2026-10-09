@@ -1,0 +1,967 @@
+/* EasyThon 2026: custom styles on top of Tailwind (CDN) */
+
+:root {
+  --bg: #030416;
+  --bg-bottom: #241044;
+  --cyan: #ef4444;
+  --indigo: #991b1b;
+  --pink: #09090b;
+  --brand: linear-gradient(100deg, var(--cyan) 0%, var(--indigo) 48%, var(--pink) 100%);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --bar-h: 3.75rem;
+  /* small screens: the 3D stage is a strip pinned above the story */
+  --stage-h: 38svh;
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg-bottom);
+  scroll-padding-top: var(--stage-h);
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-bottom) 100%);
+  color: #fff;
+}
+
+/* Ensure SUIT applies even with Tailwind's font-sans */
+body.font-sans {
+  font-family: 'SUIT Variable', 'SUIT', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+}
+
+/* Prevent awkward word breaks for Korean text */
+.wb-keep {
+  word-break: keep-all;
+  hyphens: none;
+}
+
+::selection {
+  background: rgba(129, 140, 248, 0.45);
+  color: #fff;
+}
+
+.text-gradient {
+  background: var(--brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  height: 2px;
+  background: var(--brand);
+  transform: scaleX(var(--p, 0));
+  transform-origin: 0 50%;
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--bar-h);
+  padding: 0 1.25rem;
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+[data-apply-cta] {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  z-index: 55;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 0.35rem);
+  transition: opacity 0.25s ease, transform 0.25s var(--ease-out);
+}
+
+.is-apply-visible [data-apply-cta] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.is-apply-visible [data-apply-cta]:hover {
+  transform: translate(-50%, -2px);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* On small screens the tabs hang from the bottom edge of the stage */
+.tabs {
+  position: absolute;
+  top: calc(var(--stage-h) - 2.9rem);
+  left: 50%;
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.95rem;
+  background: rgba(6, 9, 24, 0.66);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateX(-50%);
+}
+
+.tab {
+  position: relative;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #94a3b8;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.tab:hover {
+  color: #fff;
+}
+
+.tab[aria-current='true'] {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s ease;
+}
+
+.btn-sm {
+  height: 2.4rem;
+  padding: 0 0.95rem;
+  font-size: 0.9rem;
+}
+
+.btn-lg {
+  height: 3.5rem;
+  padding: 0 1.75rem;
+  font-size: 1.1rem;
+}
+
+.btn-primary {
+  background: #fff;
+  color: #1f1e33;
+  box-shadow: -8px 8px 28px -10px rgba(34, 211, 238, 0.55), 8px 8px 28px -10px rgba(232, 121, 249, 0.55);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-closed {
+  border: 1px solid #64748b;
+  background: rgba(71, 85, 105, 0.5);
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.dday {
+  font-family: var(--mono);
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.btn .dday {
+  padding: 0.15em 0.5em;
+  border-radius: 0.45em;
+  background: rgba(31, 30, 51, 0.1);
+}
+
+.dday:empty {
+  display: none;
+}
+
+/* ---------- Layout: a pinned 3D stage next to a scrolling story ---------- */
+.experience {
+  position: relative;
+}
+
+/* clip, not hidden: a scroll container here would break the sticky stage */
+.story {
+  padding: 0 1.25rem;
+  overflow-x: clip;
+  counter-reset: scene;
+}
+
+.scene {
+  padding: 2.75rem 0 3.25rem;
+  counter-increment: scene;
+}
+
+.scene-body {
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  html {
+    scroll-padding-top: 0;
+  }
+
+  .topbar {
+    padding: 0 clamp(1.5rem, 5vw, 5rem);
+  }
+
+  .topbar.is-scrolled {
+    border-color: var(--hairline);
+    background: rgba(6, 9, 24, 0.72);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    backdrop-filter: blur(14px) saturate(150%);
+  }
+
+  .tabs {
+    position: static;
+    padding: 0;
+    border: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transform: none;
+  }
+
+  .experience {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    max-width: 96rem;
+    margin: 0 auto;
+  }
+
+  .story {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0 0 0 clamp(1.5rem, 5vw, 5rem);
+  }
+
+  .scene {
+    display: flex;
+    align-items: center;
+    min-height: 100vh;
+    padding: calc(var(--bar-h) + 1rem) 0 2rem;
+  }
+
+  .scene-body {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* Tall enough to pin: the schedule holds still while the scroll steps through the day */
+@media (min-width: 1024px) and (min-height: 700px) {
+  html {
+    scroll-snap-type: y proximity;
+  }
+
+  .scene {
+    scroll-snap-align: start;
+  }
+
+  .scene-steps {
+    display: block;
+    height: calc(100vh + 6 * 15vh);
+    padding: 0;
+  }
+
+  .scene-pin {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    height: 100vh;
+    padding: calc(var(--bar-h) + 1rem) 0 2rem;
+  }
+}
+
+/* ---------- Stage ---------- */
+.stage {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--stage-h);
+  background: transparent;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.stage.is-live {
+  cursor: grab;
+}
+
+.stage.is-live:active {
+  cursor: grabbing;
+}
+
+.stage::before {
+  content: '';
+  position: absolute;
+  inset: 4% 6%;
+  background: radial-gradient(closest-side, rgba(239, 68, 68, 0.24), rgba(127, 29, 29, 0.1) 55%, transparent 72%);
+  pointer-events: none;
+}
+
+/* the story fades out as it slides under the stage */
+.stage::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 1.75rem;
+  background: linear-gradient(var(--bg), rgba(6, 9, 24, 0));
+  pointer-events: none;
+}
+
+.stage canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+
+.stage.is-live canvas {
+  opacity: 1;
+}
+
+/* Flat stand-in for the 3D bars: shown until WebGL is up, and kept if it never is */
+.stage-mark {
+  position: absolute;
+  top: calc(50% + var(--bar-h) * 0.35);
+  left: 50%;
+  width: auto;
+  height: 46%;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.6s ease;
+}
+
+.stage.is-live .stage-mark {
+  opacity: 0;
+}
+
+.stage-clock,
+.stage-tag,
+.stage-hint {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* sits in the middle of the dial; scene.js fades it with --clock */
+.stage-clock {
+  top: calc(50% + var(--lift, 0px));
+  left: 50%;
+  text-align: center;
+  opacity: var(--clock, 0);
+  transform: translate(-50%, -50%);
+}
+
+.stage-clock-time {
+  display: block;
+  font-family: var(--mono);
+  font-size: clamp(1.4rem, 3.4vw, 3.1rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.stage-clock-what {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: clamp(0.7rem, 1.15vw, 1rem);
+  font-weight: 600;
+  white-space: nowrap;
+  color: #cbd5e1;
+}
+
+/* rides on top of a podium column; scene.js places it and fades it with --podium */
+.stage-tag {
+  top: 0;
+  left: 0;
+  font-family: var(--mono);
+  font-size: clamp(0.75rem, 1.5vw, 1.25rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: var(--podium, 0);
+  will-change: transform;
+}
+
+.stage-tag small {
+  margin-left: 0.1em;
+  font-family: 'SUIT Variable', 'SUIT', sans-serif;
+  font-size: 0.6em;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.stage-hint {
+  display: none;
+  left: 0;
+  right: 0;
+  bottom: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-align: center;
+  color: #64748b;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+@media (min-width: 1024px) {
+  .stage {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    height: 100vh;
+    background: none;
+  }
+
+  /* beside the story there is nothing to fade, so the layer becomes a pool of light under the model */
+  .stage::after {
+    top: 76%;
+    left: 22%;
+    right: 22%;
+    height: 9%;
+    background: radial-gradient(closest-side, rgba(127, 29, 29, 0.2), transparent);
+  }
+
+  .stage-mark {
+    height: 38%;
+  }
+
+  .stage-hint {
+    display: block;
+  }
+
+  [data-scene-now='intro'] .stage.is-live:not(.is-touched) .stage-hint {
+    opacity: 1;
+  }
+}
+
+/* ---------- Story type ---------- */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+}
+
+.title {
+  font-size: clamp(2.6rem, 11.5vw, 4.75rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.heading {
+  font-size: clamp(2.1rem, 8vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: #fff;
+}
+
+/* "02 / 04" above the heading, counted from the scenes themselves */
+.heading::before {
+  content: '0' counter(scene) ' / 04';
+  display: block;
+  margin-bottom: 0.9rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: #94a3b8;
+}
+
+.lead {
+  font-size: clamp(1.25rem, 4.6vw, 1.7rem);
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.copy {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #94a3b8;
+}
+
+@media (min-width: 1024px) {
+  .title {
+    font-size: clamp(3rem, min(5.2vw, 9.5vh), 4.75rem);
+  }
+
+  .heading {
+    font-size: clamp(2.4rem, min(4vw, 7.5vh), 3.4rem);
+  }
+}
+
+/* ---------- Intro ---------- */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: 1.1rem;
+  background: var(--hairline);
+}
+
+.facts > div {
+  padding: 0.85rem 1.1rem;
+  background: #0a0e25;
+}
+
+.facts dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.facts dd {
+  margin-top: 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.facts small {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+/* Countdown: one rolling 3D digit per slot */
+.countdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+
+.cd-unit {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.cd-digits {
+  display: flex;
+  gap: 0.08em;
+  font-family: var(--mono);
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.cd-digit {
+  position: relative;
+  width: 0.78em;
+  height: 1.4em;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: 0.22em;
+  background: rgba(255, 255, 255, 0.05);
+  perspective: 3.2em;
+}
+
+/* Faces of a prism rolling around the X axis behind the slot */
+.cd-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform-origin: 50% 50% -0.7em;
+}
+
+.cd-face.is-in {
+  animation: cd-in 0.6s var(--ease-out) both;
+}
+
+.cd-face.is-out {
+  animation: cd-out 0.6s var(--ease-out) both;
+}
+
+@keyframes cd-in {
+  from {
+    transform: rotateX(-90deg);
+  }
+
+  to {
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes cd-out {
+  from {
+    transform: rotateX(0deg);
+  }
+
+  to {
+    transform: rotateX(90deg);
+  }
+}
+
+.cd-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* ---------- Schedule ---------- */
+.milestones {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* a row each on small screens, three cards side by side from 640px */
+.milestone {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.9rem;
+  transition: opacity 0.3s ease;
+}
+
+@media (min-width: 640px) {
+  .milestones {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .milestone {
+    display: block;
+    padding: 0.75rem 0.85rem;
+  }
+}
+
+.milestone-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.milestone time {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  color: #cbd5e1;
+}
+
+.milestone.is-done {
+  opacity: 0.6;
+}
+
+.milestone.is-next {
+  border-color: rgba(129, 140, 248, 0.6);
+  background: rgba(129, 140, 248, 0.09);
+}
+
+.milestone .dday {
+  color: #fca5a5;
+}
+
+.tl-row {
+  display: grid;
+  grid-template-columns: 3.9rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.55rem 0 0.55rem 1rem;
+  border-left: 2px solid var(--hairline);
+  color: #cbd5e1;
+  transition: color 0.3s ease, border-color 0.3s ease, transform 0.35s var(--ease-out);
+}
+
+.tl-row time {
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.tl-row h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.tl-row .tl-span {
+  color: #94a3b8;
+}
+
+.tl-span {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.tl-row[aria-current='step'] {
+  border-color: var(--indigo);
+  color: #fff;
+  transform: translateX(0.4rem);
+}
+
+.tl-row[aria-current='step'] time {
+  color: #7f1d1d;
+}
+
+.tl-row[aria-current='step'] h3,
+.tl-row[aria-current='step'] .tl-span {
+  color: #fff;
+}
+
+/* shown on the day itself, on the session that is running */
+.tl-live {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  background: var(--pink);
+  font-size: 0.68rem;
+  font-weight: 800;
+  vertical-align: 0.15em;
+  color: #1f1e33;
+}
+
+/* ---------- Prizes ---------- */
+.total-value {
+  display: inline-block;
+  font-size: clamp(3rem, 15vw, 5.2rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.prize-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6.6rem 5.4rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 0.9rem;
+  border-top: 1px solid var(--hairline);
+  transition: background-color 0.25s ease;
+}
+
+.prize-row:hover,
+.prize-row.is-hot {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.prize-rank {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.prize-rank::before {
+  content: '';
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 9999px;
+  background: var(--metal, #f7b733);
+  box-shadow: 0 0 14px var(--metal, #f7b733);
+}
+
+.prize-amount {
+  font-size: 1.45rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: #fff;
+}
+
+.prize-teams {
+  font-size: 0.85rem;
+  text-align: right;
+  color: #94a3b8;
+}
+
+/* ---------- Guide ---------- */
+.guide details {
+  border-top: 1px solid var(--hairline);
+}
+
+.guide summary {
+  position: relative;
+  padding: 1rem 2rem 1rem 0;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  list-style: none;
+}
+
+.guide summary::-webkit-details-marker {
+  display: none;
+}
+
+.guide summary::after {
+  content: '+';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: #94a3b8;
+  transform: translateY(-50%);
+  transition: transform 0.2s ease;
+}
+
+.guide details[open] summary::after {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.guide details p {
+  padding: 0 2rem 1rem 0;
+  line-height: 1.65;
+  color: #cbd5e1;
+}
+
+/* ---------- Footer ---------- */
+.footer {
+  border-top: 1px solid var(--hairline);
+  color: #e2e8f0;
+}
+
+.footer.text-gray-300 {
+  color: #e2e8f0;
+}
+
+.footer .text-gray-400 {
+  color: #cbd5e1;
+}
+
+.social-link {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.3s var(--ease-out);
+}
+
+.social-link:hover {
+  border-color: rgba(129, 140, 248, 0.6);
+  color: #fff;
+  transform: translateY(-3px);
+}
+
+/* ---------- Motion ----------
+   The intro rises on load. Every other scene rises the first time it scrolls in:
+   effects.js marks <html> with .reveal-on, then each scene with .is-seen. */
+.scene-body > * {
+  --i: 0;
+}
+
+.scene-body > :nth-child(2) { --i: 1; }
+.scene-body > :nth-child(3) { --i: 2; }
+.scene-body > :nth-child(4) { --i: 3; }
+.scene-body > :nth-child(5) { --i: 4; }
+.scene-body > :nth-child(6) { --i: 5; }
+.scene-body > :nth-child(7) { --i: 6; }
+.scene-body > :nth-child(8) { --i: 7; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: perspective(900px) translate3d(0, 30px, -70px) rotateX(18deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: perspective(900px) translate3d(0, 0, 0) rotateX(0deg);
+  }
+}
+
+#intro .scene-body > * {
+  animation: rise 0.9s var(--ease-out) both;
+  animation-delay: calc(var(--i) * 80ms + 100ms);
+  transform-origin: 50% 100%;
+}
+
+.reveal-on .scene:not(#intro) .scene-body > * {
+  transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+  transition-delay: calc(var(--i) * 70ms);
+  transform-origin: 50% 100%;
+}
+
+.reveal-on .scene:not(#intro):not(.is-seen) .scene-body > * {
+  opacity: 0;
+  transform: perspective(900px) translate3d(0, 30px, -70px) rotateX(18deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+    scroll-snap-type: none;
+  }
+
+  #intro .scene-body > *,
+  .cd-face {
+    animation: none !important;
+  }
+
+  .reveal-on .scene .scene-body > *,
+  .btn,
+  .tl-row,
+  .social-link {
+    transition: none !important;
+  }
+}
