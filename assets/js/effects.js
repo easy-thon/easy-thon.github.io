@@ -179,6 +179,7 @@
         else tab.removeAttribute('aria-current');
       });
       if (current === 'prizes') countUp();
+      document.body.classList.toggle('is-apply-visible', current !== 'intro');
     }
 
     if (!rows.length) return;

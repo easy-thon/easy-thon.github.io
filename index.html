@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#060918" />
+  <meta name="theme-color" content="#030416" />
   <link rel="icon" type="image/x-icon" href="https://easy-thon.github.io/assets/favicon.ico" />
   <title>EasyThon 2026 | 누구나 쉽게 참여하는 해커톤</title>
   <meta name="description" content="EasyThon 2026는 초보자부터 전문가까지 누구나 쉽게 참여할 수 있는 해커톤입니다." />
@@ -67,9 +67,9 @@
   <svg class="absolute" width="0" height="0" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="g-mark" gradientUnits="userSpaceOnUse" x1="-1.2" y1="-1.45" x2="1.2" y2="1.45">
-        <stop offset="0" stop-color="#22d3ee" />
-        <stop offset="0.5" stop-color="#818cf8" />
-        <stop offset="1" stop-color="#e879f9" />
+        <stop offset="0" stop-color="#ef4444" />
+        <stop offset="0.5" stop-color="#991b1b" />
+        <stop offset="1" stop-color="#09090b" />
       </linearGradient>
     </defs>
   </svg>
@@ -78,10 +78,10 @@
   <header id="topbar" class="topbar">
     <a href="#intro" class="brand">
       <svg class="w-6 h-6" viewBox="-2 -2 4 4" fill="url(#g-mark)" aria-hidden="true">
-        <rect x="-1.2" y="-1.45" width="0.56" height="2.9" rx="0.28" />
-        <rect x="-0.47" y="-1.45" width="1.67" height="0.56" rx="0.28" />
-        <rect x="-0.47" y="-0.28" width="1.25" height="0.56" rx="0.28" />
-        <rect x="-0.47" y="0.89" width="1.67" height="0.56" rx="0.28" />
+        <rect x="-1.2" y="-1.45" width="0.56" height="2.9" />
+        <rect x="-0.47" y="-1.45" width="1.67" height="0.56" />
+        <rect x="-0.47" y="-0.28" width="1.25" height="0.56" />
+        <rect x="-0.47" y="0.89" width="1.67" height="0.56" />
       </svg>
       EasyThon
     </a>
@@ -90,20 +90,20 @@
       <a href="#prizes" class="tab">상금</a>
       <a href="#guide" class="tab">참가 안내</a>
     </nav>
-    <a data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank"
-      rel="noopener noreferrer" class="btn btn-sm btn-primary">신청하기 <span class="dday" data-dday></span></a>
-    <span data-apply-closed class="hidden btn btn-sm btn-closed">신청 마감</span>
   </header>
+  <a data-apply-cta data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank"
+    rel="noopener noreferrer" class="btn btn-sm btn-primary">신청하기 <span class="dday" data-dday></span></a>
+  <span data-apply-cta data-apply-closed class="hidden btn btn-sm btn-closed">신청 마감</span>
 
   <main class="experience">
     <!-- 3D stage: assets/js/scene.js draws seven bars here that re-form for every scene of the story.
          The flat E is what shows until WebGL is up, and what stays if it never is. -->
     <div id="stage" class="stage">
       <svg class="stage-mark" viewBox="-2 -2 4 4" fill="url(#g-mark)" aria-hidden="true">
-        <rect x="-1.2" y="-1.45" width="0.56" height="2.9" rx="0.28" />
-        <rect x="-0.47" y="-1.45" width="1.67" height="0.56" rx="0.28" />
-        <rect x="-0.47" y="-0.28" width="1.25" height="0.56" rx="0.28" />
-        <rect x="-0.47" y="0.89" width="1.67" height="0.56" rx="0.28" />
+        <rect x="-1.2" y="-1.45" width="0.56" height="2.9" />
+        <rect x="-0.47" y="-1.45" width="1.67" height="0.56" />
+        <rect x="-0.47" y="-0.28" width="1.25" height="0.56" />
+        <rect x="-0.47" y="0.89" width="1.67" height="0.56" />
       </svg>
       <canvas id="scene" aria-hidden="true"></canvas>
       <div class="stage-clock" aria-hidden="true">
@@ -256,44 +256,28 @@
       <section id="guide" class="scene" data-scene="laptop">
         <div class="scene-body">
           <h2 class="heading">참가 안내</h2>
-          <dl class="guide mt-6">
-            <div>
-              <dt>참가 자격</dt>
-              <dd class="wb-keep">단국대학교 재학생 및 휴학생이라면 누구나 참여할 수 있습니다.</dd>
-            </div>
-            <div>
-              <dt>참가비</dt>
-              <dd class="wb-keep">참가비는 무료입니다. 대회 기간 동안 식사, 간식, 개발 환경이 제공됩니다.</dd>
-            </div>
-            <div>
-              <dt>준비물</dt>
-              <dd class="wb-keep">개인 노트북, 충전기, 멀티탭을 꼭 지참해주세요.</dd>
-            </div>
-            <div>
-              <dt>팀 구성</dt>
-              <dd class="wb-keep">개인 참가도 가능합니다! 운영진이 지원자의 포지션, 지원 동기, 프로젝트 경험을 바탕으로 팀을 구성해 드립니다.</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-
-      <!-- Apply -->
-      <section id="apply" class="scene" data-scene="arrow">
-        <div class="scene-body">
-          <h2 class="heading">참가 신청</h2>
-          <p class="copy mt-5 wb-keep" data-apply-open>
-            신청 마감: 2026년 11월 3일 (화) 밤 12시 <span class="dday text-indigo-300" data-dday></span>
-          </p>
-          <p class="copy mt-5 hidden wb-keep" data-apply-closed>EasyThon 2026 참가 신청은 종료되었습니다.</p>
-          <div class="mt-6">
-            <a data-apply data-apply-open href="https://link.dkuaegis.org/easython-2026" target="_blank"
-              rel="noopener noreferrer" class="btn btn-lg btn-primary">바로 신청하기 →</a>
-            <button data-apply-closed type="button" disabled class="hidden btn btn-lg btn-closed">신청 마감</button>
+          <div class="guide mt-6">
+            <details>
+              <summary>이지톤(EasyThon)이 무엇인가요?</summary>
+              <p class="wb-keep">이지톤은 누구나 쉽게 참여할 수 있는 해커톤입니다. 경험이 많든 적든 모두 환영합니다!</p>
+            </details>
+            <details>
+              <summary>참가 자격이 어떻게 되나요?</summary>
+              <p class="wb-keep">단국대학교 재학생 및 휴학생이라면 누구나 참여할 수 있으며, 팀 지원 시 AI융합대학 소속 학생이 최소 한 명 포함돼야 합니다.</p>
+            </details>
+            <details>
+              <summary>참가비가 있나요?</summary>
+              <p class="wb-keep">참가비는 무료입니다. 대회 기간 동안 식사, 간식, 개발 환경이 제공됩니다.</p>
+            </details>
+            <details>
+              <summary>준비물이 있나요?</summary>
+              <p class="wb-keep">개인 노트북, 충전기, 멀티탭을 꼭 지참해주세요. 키보드, 마우스, 모니터 등 참가자가 직접 준비한 추가 장비도 사용할 수 있습니다.</p>
+            </details>
+            <details>
+              <summary>지정된 장소 외에서의 개발이 가능한가요?</summary>
+              <p class="wb-keep">연구실, 동아리실 등 외부 인원의 도움을 받거나 별도의 지원을 받을 가능성이 있는 공간으로 이동하여 개발하는 행위는 부정행위 방지를 위해 제한합니다.</p>
+            </details>
           </div>
-          <p class="copy mt-10 wb-keep">더 궁금한 점은 아래로 문의 해주세요!<br>인스타그램:
-            <a href="https://instagram.com/dku_aegis" target="_blank" rel="noopener noreferrer"
-              class="text-white font-semibold hover:underline">@dku_aegis</a>
-          </p>
         </div>
       </section>
     </div>
@@ -337,9 +321,6 @@
       applyClosed = true;
       document.querySelectorAll('[data-apply-open]').forEach(el => el.classList.add('hidden'));
       document.querySelectorAll('[data-apply-closed]').forEach(el => el.classList.remove('hidden'));
-      // nothing left to point at: the last scene shows the logo instead of the arrows
-      const applyScene = document.getElementById('apply');
-      if (applyScene) applyScene.dataset.scene = 'logo';
       window.dispatchEvent(new Event('resize'));
     }
     checkApplyDeadline();

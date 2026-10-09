@@ -54,7 +54,7 @@
     // ----- Reflections: a soft studio of light panels, baked once -----
     function buildEnvironment() {
       const studio = new THREE.Scene();
-      studio.background = new THREE.Color(0x0b1026);
+      studio.background = new THREE.Color(0x080b2e);
       const panel = (w, h, hex, power, x, y, z) => {
         const mesh = new THREE.Mesh(
           new THREE.PlaneGeometry(w, h),
@@ -66,8 +66,8 @@
       };
       panel(16, 16, 0xffffff, 1.6, 0, 9, 2);
       panel(8, 10, 0xffffff, 2.6, -7, 3, 6);
-      panel(6, 10, 0x9bdcff, 2.2, 8, 1, -2);
-      panel(6, 10, 0xf5b5ff, 1.8, -8, -1, -5);
+      panel(6, 10, 0xff4d4d, 2.2, 8, 1, -2);
+      panel(6, 10, 0x450a0a, 1.8, -8, -1, -5);
       panel(12, 6, 0xffffff, 0.5, 0, -3, 9);
       const pmrem = new THREE.PMREMGenerator(renderer);
       const old = scene.environment;
@@ -204,7 +204,7 @@
       at: new THREE.Vector3(),
       turn: new THREE.Quaternion(),
       size: new THREE.Vector3(1, 1, 1),   // length, height, width
-      round: 0.1,
+      round: 0.05,
       bend: 0,
       from: new THREE.Color(),
       to: new THREE.Color(),
@@ -213,23 +213,23 @@
     }));
 
     const color = hex => new THREE.Color(hex);
-    const CYAN = color(0x22d3ee);
-    const INDIGO = color(0x818cf8);
-    const PINK = color(0xe879f9);
+    const RED = color(0xef4444);
+    const DEEP_RED = color(0x991b1b);
+    const BLACK = color(0x09090b);
     const METALS = [
       [color(0xd99a1c), color(0xffd56b)],
       [color(0xa9b4c6), color(0xf3f6fb)],
       [color(0xa8642c), color(0xe9a66b)],
     ];
-    const SLAB = [color(0x1d2459), color(0x2b3480)];
-    const BODY = [color(0x6068e8), color(0x8f95ff)];
-    const DECK = color(0x343aa6);
-    const SCREEN = color(0x151c4d);
-    const LINES = [color(0x67e8f9), color(0xf1f5ff), color(0xf0abfc), color(0xa5b4fc)];
-    // the brand gradient, cyan through indigo to pink
+    const SLAB = [color(0x09090b), color(0x991b1b)];
+    const BODY = [color(0x991b1b), color(0xef4444)];
+    const DECK = color(0x18181b);
+    const SCREEN = color(0x09090b);
+    const LINES = [color(0xef4444), color(0xfca5a5), color(0x7f1d1d), color(0x52525b)];
+    // the object gradient, red through deep red to black
     const ramp = (u, out) => (u < 0.5
-      ? out.lerpColors(CYAN, INDIGO, clamp(u * 2, 0, 1))
-      : out.lerpColors(INDIGO, PINK, clamp(u * 2 - 1, 0, 1)));
+      ? out.lerpColors(RED, DEEP_RED, clamp(u * 2, 0, 1))
+      : out.lerpColors(DEEP_RED, BLACK, clamp(u * 2 - 1, 0, 1)));
 
     const euler = new THREE.Euler();
     const reach = new THREE.Vector3();
@@ -238,7 +238,7 @@
     let form;   // the set of bars a shape is being written into
 
     // lays bar i down: centre, rotation, [length, height, width], roundness 0..1 of a full capsule
-    function put(i, { at, turn, frame, size, round = 1, bend = 0, glow = 0, metal = 0, from, to = from }) {
+    function put(i, { at, turn, frame, size, round = 0.05, bend = 0, glow = 0, metal = 0, from, to = from }) {
       const bar = form[i];
       bar.at.set(at[0], at[1], at[2]);
       if (frame) bar.turn.copy(frame);
@@ -261,7 +261,7 @@
       bar.turn.copy(into.turn);
       bar.at.set(slide, 0, 0).applyQuaternion(into.turn).add(into.at);
       bar.size.set(Math.min(into.size.x, into.size.y) * 0.5, into.size.y * 0.5, into.size.z * 0.5);
-      bar.round = Math.min(bar.size.x, bar.size.y, bar.size.z) / 2;
+      bar.round = Math.min(bar.size.x, bar.size.y, bar.size.z) * 0.025;
       bar.bend = into.bend;
       bar.glow = 0;
       bar.metal = into.metal;
@@ -323,7 +323,7 @@
             at: [out * Math.sin(phi), out * Math.cos(phi), 0.24 * hot],
             frame: spin.setFromRotationMatrix(basis),
             size: [span * perMinute * RING, 0.44, 0.46],
-            round: 0.85,
+            round: 0.05,
             bend: 1 / RING,
             glow: 0.55 * hot,
             // the rest of the day sits back so the leading session reads at a glance
