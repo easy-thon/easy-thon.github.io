@@ -90,7 +90,8 @@
     const specs = new Map();
     keys.forEach(key => {
       if (key.kind === 'space') return;
-      if (key.code === 'Enter') specs.set('Enter', { word: 'enter', icon: 'enter' });
+      // the enter key ends up the size of a hand: its legend takes a 2 x 2 block of the atlas, to stay sharp there
+      if (key.code === 'Enter') specs.set('Enter', { word: 'enter', icon: 'enter', span: 2 });
       else if (key.code === 'Backspace') specs.set('Backspace', { icon: 'back' });
       else if (key.sub) specs.set(key.code, { main: key.main, sub: key.sub });
       else specs.set(key.code, key.kind === 'mod' ? { word: key.main } : { main: key.main });
@@ -172,46 +173,23 @@
     return { targets, plate: { w: side, d: side }, view: [0.98, -0.3] };
   }
 
-  // a round step for the rules of a chart: 1, 2, 2.5 or 5 times a power of ten, no smaller than this
-  function roundStep(least) {
-    const power = 10 ** Math.floor(Math.log10(Math.max(least, 1e-6)));
-    return [1, 2, 2.5, 5, 10].map(m => m * power).find(step => step >= least - 1e-9);
-  }
-
   // The prizes as a bar chart: a bar for every winning team, as tall as its prize and in the colour of its row on the
-  // page, standing on the plate in front of a board ruled at round amounts. main.js writes the amounts over the bars
-  // and the values of the rules beside them.
+  // page, standing on the plate with nothing behind it. main.js writes the amount over each bar.
   function chart(page) {
     const TALL = 4.2;          // the top prize's bar
     const PITCH = 1.45;        // bar to bar
-    const BAR_Z = 0.32;
-    const BOARD_Z = -0.78;
-    const BOARD_D = 0.14;
     const most = Math.max(1, ...page.awards.map(award => award.amount));
     const n = page.awards.length;
     const targets = page.awards.map((award, i) => {
       const h = Math.max(0.1, (TALL * award.amount) / most);
       return cap({
-        x: (i - (n - 1) / 2) * PITCH, y: h / 2 + 0.005, z: BAR_Z, w: 1, h, d: 1, profile: FLAT_PROFILE,
+        x: (i - (n - 1) / 2) * PITCH, y: h / 2 + 0.005, w: 1, h, d: 1, profile: FLAT_PROFILE,
         color: award.tone, role: 'bar', index: award.index, prize: award.row, amount: award.amount,
       });
     });
-    const span = Math.max(1, n) * PITCH + 0.45;
-    const boardH = TALL + 0.55;
-    targets.push(cap({
-      y: boardH / 2, z: BOARD_Z, w: span, h: boardH, d: BOARD_D, profile: FLAT_PROFILE, color: COLORS.plate,
-      role: 'board',
-    }));
-    // a rule at every round step up to the top prize (every 25 for 100), just proud of the board
-    const step = roundStep(most / 4);
-    for (let level = step; level <= most + 1e-6; level += step) {
-      targets.push(cap({
-        y: (TALL * level) / most, z: BOARD_Z + BOARD_D / 2 + 0.035, w: span - 0.3, h: 0.045, d: 0.06, profile: [0, 0],
-        color: COLORS.cap, role: 'grid', level: Math.round(level * 100) / 100,
-      }));
-    }
-    const reach = Math.max(-BOARD_Z + BOARD_D / 2, BAR_Z + 0.5);
-    return { targets, plate: { w: span + MARGIN * 2, d: reach * 2 + MARGIN * 2 }, view: [0.36, -0.42] };
+    // a plinth with the same border all round, a little wider than the keyboard's
+    const border = MARGIN * 2.4;
+    return { targets, plate: { w: Math.max(0, n - 1) * PITCH + 1 + border, d: 1 + border }, view: [0.4, -0.42] };
   }
 
   // a single key, the size of a hand: the way in

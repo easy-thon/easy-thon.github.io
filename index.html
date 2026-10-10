@@ -224,12 +224,12 @@
             <span class="prize-amount">100<small>만원</small></span>
             <span class="prize-teams">1팀</span>
           </li>
-          <li class="prize-row" data-amount="70" data-teams="1" style="--tone: var(--ink)">
+          <li class="prize-row" data-amount="70" data-teams="1" style="--tone: var(--coral)">
             <span class="prize-rank">최우수상</span>
             <span class="prize-amount">70<small>만원</small></span>
             <span class="prize-teams">1팀</span>
           </li>
-          <li class="prize-row" data-amount="50" data-teams="2" style="--tone: var(--porcelain)">
+          <li class="prize-row" data-amount="50" data-teams="2" style="--tone: var(--blush)">
             <span class="prize-rank">우수상</span>
             <span class="prize-amount">50<small>만원</small></span>
             <span class="prize-teams">2팀 · 팀당</span>
@@ -354,13 +354,19 @@
     const target = new Date('2026-11-14T09:00:00+09:00');
     const timerWrap = document.getElementById('countdown-timer');
     const rollDigits = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // the digits roll only while the timer is on screen; off it they simply change, so the page is not animating
+    // something nobody sees, every second
+    let timerInView = true;
+    if (timerWrap && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => { timerInView = entry.isIntersecting; }).observe(timerWrap);
+    }
     function block(label) {
       return `<span class="cd-unit"><span class="cd-digits" data-role="digits"></span><span class="cd-label">${label}</span></span>`;
     }
     function setDigits(el, text) {
       if (el.dataset.value === text) return;
       // roll only while visible, and never on the first paint or when the digit count changes
-      const roll = rollDigits && !document.hidden && el.children.length === text.length;
+      const roll = rollDigits && timerInView && !document.hidden && el.children.length === text.length;
       el.dataset.value = text;
       while (el.children.length > text.length) el.lastChild.remove();
       while (el.children.length < text.length) {

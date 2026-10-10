@@ -47,13 +47,12 @@
     const sessions = starts.map((start, i) => ({ start, span: Math.max(15, (starts[i + 1] ?? start + 30) - start) }));
 
     const prizeRows = [...document.querySelectorAll('#prize-list [data-amount]')];
-    // one award per winning team, in the order of the list (as many as there are keys besides the chart's board and
-    // its four rules at most)
+    // one award per winning team, in the order of the list (no more than there are keys)
     const awards = prizeRows.flatMap((el, row) => Array.from({ length: Number(el.dataset.teams) || 1 }, () => ({
       amount: Number(el.dataset.amount) || 0,
       row,
       tone: getComputedStyle(el).getPropertyValue('--tone').trim() || '#dcd9d2',
-    }))).slice(0, keyCount - 5).map((award, index) => ({ ...award, index }));
+    }))).slice(0, keyCount).map((award, index) => ({ ...award, index }));
 
     const startAt = document.querySelector('[data-milestone="start"] time');
     const startTime = startAt ? new Date(startAt.dateTime).getTime() : NaN;
@@ -62,7 +61,7 @@
 
   parts.start = function start(THREE, { stage, canvas, pace = 1 / 60 }) {
     const { keycapGeometry, keycapMaterial, keycapDepthMaterial, ATTRIBUTES } = parts.keycap;
-    const { createLegends, legendFonts } = parts.legends;
+    const { createLegends, legendFonts, legendFontsReady } = parts.legends;
     const {
       boardKeys, buildFormations, countdownFormation, countdownText, legendSpecs, BRAND, COLORS, PLATE_H, CAP_PROFILE,
     } = parts.layouts;
@@ -71,6 +70,12 @@
     const wide = window.matchMedia('(min-width: 1024px)');
     let narrow = !wide.matches;
 
+    // Sharpness: the stage draws at the screen's own pixel density, up to 2 pixels per CSS pixel. A canvas with fewer
+    // pixels than the screen is stretched to fit, and looks soft; edges are multisampled on top, as even at 2x the
+    // steps show on a red cap against the page.
+    const MAX_RATIO = 2;
+    const MAX_PIXELS = 8.3e6;   // a 1920 x 1080 window at 2x; anything larger is drawn a little under its density
+    const screenRatio = () => Math.min(window.devicePixelRatio || 1, MAX_RATIO);
     let renderer;
     try {
       renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -89,15 +94,17 @@
       console.warn('[stage] 3D stage disabled: a shader did not compile',
         gl.getProgramInfoLog(program), gl.getShaderInfoLog(vertexShader), gl.getShaderInfoLog(fragmentShader));
     };
-    const maxPixels = 3.5e6;
-    let quality = 1;   // lowered by watchFrameRate when frames run slow
+    // a device that cannot keep up draws fewer pixels, a step at a time, and steps back up once it has room again
+    // (see watchFrameRate)
+    const LEVELS = [1, 0.8, 0.64, 0.5];
+    let level = 0;
     let dpr = 1;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 60);
     camera.position.z = CAM_Z;
     camera.updateMatrixWorld();   // the labels are projected before the first frame is drawn
-    const viewH =2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * CAM_Z;
+    const viewH = 2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * CAM_Z;
 
     // ----- Light: a window to the upper left, the room in the page's colours, and soft studio panels to reflect -----
     const SUN = new THREE.Vector3(-0.5, 0.86, 0.62).normalize();
@@ -155,7 +162,8 @@
     keyIndex.set('HanjaMode', keyIndex.get('Lang2'));
 
     const legends = createLegends(THREE, legendSpecs(keys, page), { size: narrow ? 1024 : 2048 });
-    legendFonts().then(() => legends.redraw());
+    // drawn again once the faces arrive, unless they were here already
+    if (!legendFontsReady()) legendFonts().then(() => legends.redraw());
     legends.texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
     const color = value => new THREE.Color(value);
@@ -183,6 +191,7 @@
           legendZ: legend ? legend.at[1] : 0,
           legendSize: legend ? legend.size : 1,
           legendTurn: legend && legend.turn ? legend.turn : 0,
+          legendSpan: legend ? legends.spanOf.get(legend.id) : 1,
         };
       });
       f.turn = new THREE.Quaternion().setFromEuler(new THREE.Euler(f.view[0], f.view[1], 0, 'XYZ'));
@@ -338,7 +347,7 @@
     // ----- Poses: one key in one formation, as it should look right now -----
     const makePose = () => ({
       pos: new THREE.Vector3(), yaw: 0, roll: 0, tilt: 0, w: 1, h: 1, d: 1, scale: 1, inset: 0, dish: 0,
-      tint: new THREE.Color(), cell: -1, legendX: 0, legendZ: 0, legendSize: 1, legendTurn: 0, legendOn: 1,
+      tint: new THREE.Color(), cell: -1, legendX: 0, legendZ: 0, legendSize: 1, legendTurn: 0, legendSpan: 1, legendOn: 1,
       rough: 0.62, metal: 0, glow: 0, rigid: false,
     });
     const poseA = makePose();
@@ -381,7 +390,7 @@
       out.inset = slot.profile[0]; out.dish = slot.profile[1];
       out.tint.copy(slot.tint);
       out.cell = slot.cell; out.legendX = slot.legendX; out.legendZ = slot.legendZ; out.legendSize = slot.legendSize;
-      out.legendTurn = slot.legendTurn;
+      out.legendTurn = slot.legendTurn; out.legendSpan = slot.legendSpan;
       out.rough = 0.62;
       out.metal = 0;
       out.glow = 0;
@@ -424,17 +433,12 @@
         }
         case 'bar': {
           // a prize in focus (its row on the page, or the bar under the pointer) glows a little, and the other bars
-          // fade toward the board
+          // fade toward the plate
           const h = heat.prize[slot.prize] || 0;
           out.glow = 0.05 * h;
           out.tint.lerp(PLATE, 0.6 * clamp(hotPrize - h, 0, 1));
           break;
         }
-        case 'board':
-          // the same anodised metal as the plate it stands on
-          out.rough = 0.46;
-          out.metal = 0.12;
-          break;
         case 'enter':
           out.glow = 0.03;
           break;
@@ -453,13 +457,19 @@
     const placements = {};   // per frame: centre and size in world units, top and height in stage pixels
     const frameOf = name => placements[name] || placements.side || { x: 0, y: 0, w: viewH, h: viewH, top: 0, height: 1 };
     let sized = '';
-    let stageW = 1;          // the stage in CSS pixels
+    // Measured here, when the layout changes, and only read back in the frames: a frame that asked the page where
+    // something is would make the browser lay the page out again in the middle of it
+    let stageW = 1;              // the stage in CSS pixels
     let stageH = 1;
+    let stageLeft = 0;           // and where it is on screen (fixed once live)
+    let stageTop = 0;
+    let footerTop = Infinity;    // the footer's top, in page pixels
 
     function measure() {
       const vh = window.innerHeight;
       narrow = !wide.matches;
       const end = Math.max(0, document.documentElement.scrollHeight - vh);
+      footerTop = footer ? footer.getBoundingClientRect().top + window.scrollY : Infinity;
       marks = sceneEls.map(el => {
         const box = el.getBoundingClientRect();
         const top = box.top + window.scrollY;
@@ -492,7 +502,7 @@
       stageW = w;
       stageH = h;
       narrow = !wide.matches;
-      dpr = Math.max(0.75, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(maxPixels / (w * h))) * quality);
+      dpr = Math.max(0.75, Math.min(screenRatio(), Math.sqrt(MAX_PIXELS / (w * h))) * LEVELS[level]);
       const next = `${w}x${h}@${dpr}`;
       if (next !== sized) {
         sized = next;
@@ -502,6 +512,8 @@
         camera.updateProjectionMatrix();
       }
       const room = stage.getBoundingClientRect();
+      stageLeft = room.left;
+      stageTop = room.top;
       const unit = viewH / h;   // world units per pixel where the model stands
       frameEls.forEach(el => {
         const box = el.getBoundingClientRect();
@@ -559,8 +571,7 @@
       return far < 0 ? null : near;
     }
     function keyAt(clientX, clientY) {
-      const box = canvas.getBoundingClientRect();
-      ndc.set(((clientX - box.left) / box.width) * 2 - 1, 1 - ((clientY - box.top) / box.height) * 2);
+      ndc.set(((clientX - stageLeft) / stageW) * 2 - 1, 1 - ((clientY - stageTop) / stageH) * 2);
       raycaster.setFromCamera(ndc, camera);
       const ray = raycaster.ray.applyMatrix4(inverse.copy(model.matrixWorld).invert());
       let found = -1;
@@ -588,29 +599,27 @@
       shown[name] = text;
       stage.style.setProperty(name, text);
     };
-    // the amount over each bar, and the value of each rule at its left end, kept over the keys as they move
+    // the amount over each bar, kept over it as it moves
     const tags = formations.prizes.slots.flatMap((slot, k) => {
-      if (!slot || (slot.role !== 'bar' && slot.role !== 'grid')) return [];
+      if (!slot || slot.role !== 'bar') return [];
       const el = document.createElement('span');
-      el.className = slot.role === 'bar' ? 'stage-tag' : 'stage-tag stage-tag-rule';
+      el.className = 'stage-tag';
       el.setAttribute('aria-hidden', 'true');
-      el.innerHTML = slot.role === 'bar' ? `${slot.amount}<small>만원</small>` : String(slot.level);
+      el.innerHTML = `${slot.amount}<small>만원</small>`;
       stage.appendChild(el);
-      return [{ el, k, over: slot.role === 'bar', prize: slot.prize, shown: '' }];
+      return [{ el, k, prize: slot.prize, shown: '' }];
     });
     const point = new THREE.Vector3();
     const offset = new THREE.Vector3();
     function pin(tag) {
       const key = keyState[tag.k];
-      if (tag.over) offset.set(0, key.half.y + 0.2, 0);
-      else offset.set(-key.half.x - 0.14, 0, 0);
-      point.copy(key.centre).add(offset.applyQuaternion(key.turn));
+      point.copy(key.centre).add(offset.set(0, key.half.y + 0.2, 0).applyQuaternion(key.turn));
       model.localToWorld(point).project(camera);
       const x = ((point.x + 1) / 2) * stageW;
       const y = ((1 - point.y) / 2) * stageH;
-      tag.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) ${tag.over ? 'translate(-50%, -100%)' : 'translate(-100%, -50%)'}`;
+      tag.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
       // beside a prize in focus, the other amounts step back
-      const dim = tag.over ? (1 - 0.65 * clamp(hotPrize - (heat.prize[tag.prize] || 0), 0, 1)).toFixed(2) : '1.00';
+      const dim = (1 - 0.65 * clamp(hotPrize - (heat.prize[tag.prize] || 0), 0, 1)).toFixed(2);
       if (tag.shown !== dim) {
         tag.shown = dim;
         tag.el.style.setProperty('--tag', dim);
@@ -790,10 +799,10 @@
     let lookGoalY = 0;
     let dirty = true;
     let movedAt = 0;     // last scroll, resize or pointer move
+    let stirredAt = 0;   // last frame in which anything moved besides the slow sway (see update)
     let liveAt = 0;      // when the stage first went live
     let assembled = reduceMotion ? 1 : 0;   // 0..1: the plate rises and the keys drop onto it
-    let covered = false;                     // the footer is over the whole stage
-    const checkCovered = () => { covered = !!footer && footer.getBoundingClientRect().top <= 0; };
+    let covered = false;                     // the footer is over the whole stage (watched, see Input)
 
     const target = new THREE.Vector3();
     const tint = new THREE.Color();
@@ -870,6 +879,7 @@
       out.legendZ = near.legendZ;
       out.legendSize = near.legendSize;
       out.legendTurn = near.legendTurn;
+      out.legendSpan = near.legendSpan;
       out.rigid = poseA.rigid || poseB.rigid;
       out.legendOn = poseA.cell === poseB.cell ? 1 : Math.abs(1 - 2 * t);
       if (poseA.cell === poseB.cell) {
@@ -886,9 +896,13 @@
       const now = performance.now();
       if (!reduceMotion) time += dt;
       if (assembled < 1) assembled = clamp((now - liveAt) / 1700, 0, 1);
+      // anything still on its way this frame (keys on their springs, highlights easing, the hands sweeping...)?
+      // Once nothing is, only the sway is left, and the frames come at half rate (see tick)
+      let stir = assembled < 1 || dragging || kicks.length > 0 || party.on || bits.count > 0;
 
       // where the scroll is (Lenis already eases the scroll itself)
       scrollY = reduceMotion ? window.scrollY : damp(scrollY, window.scrollY, window.lenis ? 24 : 10, dt);
+      if (Math.abs(window.scrollY - scrollY) > 0.5) stir = true;
       locate();
       for (const name of NAMES) weight[name] = 0;
       weight[a.shape] += 1 - blend;
@@ -901,12 +915,15 @@
       heat.day.forEach((v, i) => { heat.day[i] = reduceMotion ? +(i === litStep) : damp(v, +(i === litStep), 10, dt); });
       heat.prize.forEach((v, i) => { heat.prize[i] = reduceMotion ? +(i === litRow) : damp(v, +(i === litRow), 10, dt); });
       hotPrize = Math.max(0, ...heat.prize);
+      if (Math.abs(step - stepGoal) > 0.002 || heat.day.some((v, i) => Math.abs(v - +(i === litStep)) > 0.003)
+        || heat.prize.some((v, i) => Math.abs(v - +(i === litRow)) > 0.003)) stir = true;
       // the hands sweep to the session in focus: the minute hand round once for every hour on the way, at most four
       // turns a second
       const lit = page.sessions[clamp(litStep, 0, page.sessions.length - 1)];
       if (lit) {
         if (reduceMotion) clockTime = lit.start;
         else clockTime += clamp((lit.start - clockTime) * (1 - Math.exp(-5 * dt)), -240 * dt, 240 * dt);
+        if (Math.abs(lit.start - clockTime) > 0.5) stir = true;
       }
 
       // the board types the name while it is centre stage and nobody else is typing
@@ -968,6 +985,9 @@
             key.hop += key.hopVel * h;
           }
         }
+        if (now < key.holdUntil || key.vel.lengthSq() > 1e-4 || Math.abs(key.pressVel) > 0.02 || Math.abs(key.hopVel) > 0.02) {
+          stir = true;
+        }
 
         // the opening drop
         let introY = 0;
@@ -987,7 +1007,7 @@
         key.half.set(goal.w / 2, goal.h / 2, goal.d / 2).multiplyScalar(scale);
 
         attr.aSize.setXYZW(k + 1, goal.w, goal.h, goal.d, 0.07);
-        attr.aProfile.setXYZW(k + 1, goal.inset, goal.dish, goal.legendTurn, 0);
+        attr.aProfile.setXYZW(k + 1, goal.inset, goal.dish, goal.legendTurn, goal.legendSpan);
         tint.copy(goal.tint);
         attr.aColor.setXYZ(k + 1, tint.r, tint.g, tint.b);
         attr.aLegend.setXYZW(k + 1, goal.cell, goal.legendX, goal.legendZ, goal.legendSize);
@@ -1002,6 +1022,7 @@
       const plateD = lerp(fa.plate.d, fb.plate.d, eased);
       plate.w = reduceMotion ? plateW : damp(plate.w, plateW, 12, dt);
       plate.d = reduceMotion ? plateD : damp(plate.d, plateD, 12, dt);
+      if (Math.abs(plate.w - plateW) + Math.abs(plate.d - plateD) > 0.005) stir = true;
       const rise = assembled < 1 ? outQuart(clamp((now - liveAt) / 500, 0, 1)) : 1;
       mesh.setMatrixAt(0, matrix.compose(placed.set(0, -PLATE_H / 2, 0), spin.identity(), scaleV.set(lerp(0.9, 1, rise), Math.max(rise, 1e-4), lerp(0.9, 1, rise))));
       attr.aSize.setXYZW(0, plate.w, PLATE_H, plate.d, 0.32);
@@ -1026,6 +1047,9 @@
       }
       lookX = damp(lookX, lookGoalX, 4, dt);
       lookY = damp(lookY, lookGoalY, 4, dt);
+      if (Math.abs(yaw) + Math.abs(pitch) > 0.002 || Math.abs(lookX - lookGoalX) + Math.abs(lookY - lookGoalY) > 0.003) {
+        stir = true;
+      }
       const sway = reduceMotion ? 0 : 1;
       // behind the story nobody turns it by hand, so it swings a little wider on its own
       const swing = narrow ? Math.sin(time * 0.3) * 0.16 : Math.sin(time * 0.45) * 0.06;
@@ -1066,7 +1090,7 @@
         linkCheckedAt = now + 1000;
       }
       // the notes step aside as the footer comes up over the stage
-      const clear = footer ? clamp((footer.getBoundingClientRect().top / window.innerHeight - 0.45) / 0.3, 0, 1) : 1;
+      const clear = clamp(((footerTop - window.scrollY) / window.innerHeight - 0.45) / 0.3, 0, 1);
       notes.forEach(note => {
         // the big key only invites a press while the application is open
         const on = narrow || (note.name === 'enter' && !linkOpen) ? 0 : clamp((weight[note.name] - 0.75) / 0.25, 0, 1) * clear;
@@ -1079,25 +1103,44 @@
       const tagsOn = narrow ? 0 : clamp((weight.prizes - 0.75) / 0.25, 0, 1) * clear;
       setVar('--tags', tagsOn);
       if (tagsOn > 0) tags.forEach(pin);
+      if (stir) stirredAt = now;
     }
 
-    // drop the resolution if the device cannot keep up
+    // The resolution follows what the device can do. Frames are timed in one-second runs, only while the model moves
+    // (idle frames come at half rate on purpose) and not while it settles: in the first seconds, while fonts, textures
+    // and shaders arrive, and just after a resize or a change of resolution. Two slow seconds in a row cost a step of
+    // resolution, and eight easy ones win it back, unless that step has proved too slow twice already. Slow means
+    // well below what the browser itself allows, so a 30 fps power-saving cap is not punished.
+    const SLOW = Math.max(1 / 40, pace * 1.6);
+    const EASY = Math.max(1 / 52, pace * 1.25);
+    const strikes = LEVELS.map(() => 0);
+    let watchFrom = Infinity;   // set when the stage goes live
     let slowRuns = 0;
+    let easyRuns = 0;
     let frames = 0;
     let elapsed = 0;
-    function watchFrameRate(delta) {
-      if (delta > 0.25) return;   // the tab was in the background
+    function watchFrameRate(delta, now) {
+      if (now < watchFrom || delta > 0.25) return;   // settling, or the tab was in the background
       elapsed += delta;
-      if (++frames < 45) return;
-      // slow means well below what the browser itself allows, so a 30 fps power-saving cap is not punished
-      slowRuns = elapsed / frames > Math.max(1 / 40, pace * 1.6) ? slowRuns + 1 : 0;
+      if (++frames < 60) return;
+      const mean = elapsed / frames;
       frames = 0;
       elapsed = 0;
-      if (slowRuns >= 2 && dpr > 0.75) {
-        quality *= 0.8;
-        slowRuns = 0;
-        resize();
+      slowRuns = mean > SLOW ? slowRuns + 1 : 0;
+      easyRuns = mean < EASY ? easyRuns + 1 : 0;
+      let next = level;
+      if (slowRuns >= 2 && level < LEVELS.length - 1) {
+        strikes[level]++;
+        next = level + 1;
+      } else if (easyRuns >= 8 && level > 0 && strikes[level - 1] < 2) {
+        next = level - 1;
       }
+      if (next === level) return;
+      level = next;
+      slowRuns = 0;
+      easyRuns = 0;
+      watchFrom = now + 2000;
+      resize();
     }
 
     let raf = 0;
@@ -1112,19 +1155,21 @@
         return;
       }
       const delta = (now - last) / 1000;
-      // a backdrop on a page that is standing still only sways, which half the frames carry just as well
-      const idle = narrow && assembled >= 1 && now - movedAt > 600;
-      if (idle && delta < 1 / 34) return;
+      // About 60 frames a second at most, on faster screens too. And while nothing moves but the slow sway (the page
+      // standing still, every key at rest), half that, which carries the sway just as well
+      const idle = assembled >= 1 && now - movedAt > 600 && now - stirredAt > 400;
+      if (delta < (idle ? 1 / 34 : 1 / 80)) return;
       last = now;
       dirty = false;
       update(Math.min(delta, 0.05));
       renderer.render(scene, camera);
-      if (!idle) watchFrameRate(delta);
+      if (!idle) watchFrameRate(delta, now);
     }
     function run() {
       if (broken) return;
+      // fixed from here on, so it is measured where it stays
+      stage.classList.add('is-live');
       resize();
-      checkCovered();
       if (!liveAt) liveAt = performance.now();
       scrollY = window.scrollY;
       step = stepGoal;
@@ -1140,8 +1185,8 @@
       }
       plate.w = formations[a.shape].plate.w;
       plate.d = formations[a.shape].plate.d;
-      stage.classList.add('is-live');
       last = performance.now();
+      watchFrom = last + 3500;   // the opening, and the fonts and textures that arrive with it
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(tick);
     }
@@ -1172,11 +1217,12 @@
       if (slot && slot.role === 'tick' && slot.session >= 0 && weight.day > 0.85) setHover('day', slot.session);
       else if (slot && slot.role === 'bar' && weight.prizes > 0.85) setHover('prize', slot.prize);
       else setHover(null, null);
-      stage.classList.toggle('is-pointing', onEnter(hovered) && !!applyLink());
+      stage.classList.toggle('is-pointing', onEnter(hovered) && linkOpen);
     }
 
     const refresh = () => {
       resize();
+      watchFrom = Math.max(watchFrom, performance.now() + 1500);
       dirty = true;
       movedAt = performance.now();
     };
@@ -1184,7 +1230,6 @@
     window.addEventListener('scroll', () => {
       dirty = true;
       movedAt = performance.now();
-      checkCovered();
     }, { passive: true });
     if ('ResizeObserver' in window) {
       // the stage changes size with the layout; the page changes height with its fonts
@@ -1196,6 +1241,14 @@
         visible = entries[0].isIntersecting;
         dirty = true;
       }).observe(stage);
+      // The footer covers the stage once its top reaches the top of the screen: watched against a line there, so that
+      // the scroll handler never has to ask where it is (in Chrome even reading the scroll position lays the page out)
+      if (footer) {
+        new IntersectionObserver(entries => {
+          covered = entries[0].isIntersecting;
+          dirty = true;
+        }, { rootMargin: '0px 0px -100% 0px' }).observe(footer);
+      }
     }
 
     // the visitor's own keyboard plays the board while it is on stage (never while they type into a field)
@@ -1249,9 +1302,8 @@
       }
       if (e.pointerType === 'touch' || !b) return;
       humanAt = performance.now();
-      const box = stage.getBoundingClientRect();
-      lookGoalX = ((e.clientX - box.left) / box.width) * 2 - 1;
-      lookGoalY = 1 - ((e.clientY - box.top) / box.height) * 2;
+      lookGoalX = ((e.clientX - stageLeft) / stageW) * 2 - 1;
+      lookGoalY = 1 - ((e.clientY - stageTop) / stageH) * 2;
       pointer.x = e.clientX;
       pointer.y = e.clientY;
       pointer.over = true;

@@ -66,11 +66,11 @@
     const step = stageStep ?? lead;       // this one is lit
     if (step !== lit && rows[step]) {
       lit = step;
+      placeMarker();   // measured before the rows change
       rows.forEach((row, i) => {
         if (i === step) row.setAttribute('aria-current', 'step');
         else row.removeAttribute('aria-current');
       });
-      placeMarker();
       if (noteTime) noteTime.textContent = rows[step].dataset.time;
       if (noteWhat) noteWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
     }
@@ -175,15 +175,13 @@
   let pinned = false;
   let current = '';
   let ticking = false;
+  // Every measurement first, then every change: a measurement taken after a change makes the browser lay the page out
+  // again on the spot, once more each frame of the scroll
   function update() {
     ticking = false;
     const y = window.scrollY;
     const vh = window.innerHeight;
     const max = root.scrollHeight - vh;
-    if (topbar) {
-      topbar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1).toFixed(4) : 0);
-      topbar.classList.toggle('is-scrolled', y > 8);
-    }
 
     // the readable area starts under the top bar
     const shade = topbar ? topbar.offsetHeight : 0;
@@ -193,23 +191,13 @@
 
     let scene = scenes[0];
     scenes.forEach(el => { if (el.getBoundingClientRect().top <= line) scene = el; });
-    if (scene && scene.id !== current) {
-      current = scene.id;
-      document.body.dataset.sceneNow = current;
-      tabs.forEach(tab => {
-        if (tab.getAttribute('href') === `#${current}`) tab.setAttribute('aria-current', 'true');
-        else tab.removeAttribute('aria-current');
-      });
-      if (current === 'prizes') countUp();
-    }
 
-    if (!rows.length) return;
-    if (pinned) {
+    if (rows.length && pinned) {
       // the schedule holds still: the distance scrolled through it picks the row
       const box = schedule.getBoundingClientRect();
       const travel = box.height - vh;
       scrollStep = travel > 1 ? Math.round(clamp(-box.top / travel, 0, 1) * (rows.length - 1)) : 0;
-    } else {
+    } else if (rows.length) {
       // the schedule scrolls by: the row nearest the middle of the readable area leads
       let gap = Infinity;
       rows.forEach((row, i) => {
@@ -221,7 +209,21 @@
         }
       });
     }
-    showStep();
+
+    if (topbar) {
+      topbar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1).toFixed(4) : 0);
+      topbar.classList.toggle('is-scrolled', y > 8);
+    }
+    if (scene && scene.id !== current) {
+      current = scene.id;
+      document.body.dataset.sceneNow = current;
+      tabs.forEach(tab => {
+        if (tab.getAttribute('href') === `#${current}`) tab.setAttribute('aria-current', 'true');
+        else tab.removeAttribute('aria-current');
+      });
+      if (current === 'prizes') countUp();
+    }
+    if (rows.length) showStep();
   }
   function requestUpdate() {
     if (ticking) return;

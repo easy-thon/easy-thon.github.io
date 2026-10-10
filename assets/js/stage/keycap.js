@@ -34,13 +34,13 @@
     return geo;
   }
 
-  // per instance: size and corner radius, taper, dish and legend turn, base colour, legend, and finish
+  // per instance: size and corner radius, taper, dish, legend turn and span, base colour, legend, and finish
   const ATTRIBUTES = { aSize: 4, aProfile: 4, aColor: 3, aLegend: 4, aLook: 4 };
 
   const SHAPE = /* glsl */ `
     attribute vec3 aCore;
     attribute vec4 aSize;      // width, height, depth, corner radius
-    attribute vec4 aProfile;   // how far the top is drawn in, depth of the dish, turn of the legend
+    attribute vec4 aProfile;   // how far the top is drawn in, depth of the dish, turn of the legend, cells it spans
     vec3 capShape(out vec3 capNormal) {
       vec3 halfSize = aSize.xyz * 0.5;
       float radius = min(aSize.w, min(halfSize.x, min(halfSize.y, halfSize.z)));
@@ -76,6 +76,7 @@
           varying vec3 vLegendTint;
           varying vec2 vLegendUv;
           varying float vLegendCell;
+          varying float vLegendSpan;
           varying float vLegendOn;
           varying vec4 vLook;`)
         .replace('#include <beginnormal_vertex>', `
@@ -97,6 +98,7 @@
           legendAt = vec2(turnC * legendAt.x - turnS * legendAt.y, turnS * legendAt.x + turnC * legendAt.y);
           vLegendUv = legendAt / max(aLegend.w, 1e-4) + 0.5;
           vLegendCell = aLegend.x;
+          vLegendSpan = max(aProfile.w, 1.0);
           vLegendOn = step(0.999, aCore.y) * step(0.0, aLegend.x) * aLook.z;
           vLook = aLook;`)
         .replace('#include <begin_vertex>', 'vec3 transformed = capPoint;');
@@ -108,6 +110,7 @@
           varying vec3 vLegendTint;
           varying vec2 vLegendUv;
           varying float vLegendCell;
+          varying float vLegendSpan;
           varying float vLegendOn;
           varying vec4 vLook;`)
         .replace('#include <color_fragment>', `#include <color_fragment>
@@ -116,8 +119,8 @@
             vec2 inCell = clamp(vLegendUv, 0.0, 1.0);
             float inside = step(0.0, vLegendUv.x) * step(vLegendUv.x, 1.0) * step(0.0, vLegendUv.y) * step(vLegendUv.y, 1.0);
             float cell = floor(vLegendCell + 0.5);
-            vec2 at = vec2(mod(cell, uLegendCols), floor(cell / uLegendCols));
-            vec2 uv = vec2((at.x + inCell.x) / uLegendCols, 1.0 - (at.y + inCell.y) / uLegendCols);
+            vec2 at = vec2(mod(cell, uLegendCols), floor(cell / uLegendCols)) + inCell * floor(vLegendSpan + 0.5);
+            vec2 uv = vec2(at.x / uLegendCols, 1.0 - at.y / uLegendCols);
             float ink = texture2D(uLegends, uv).a * inside * min(vLegendOn, 1.0);
             diffuseColor.rgb = mix(diffuseColor.rgb, vLegendTint, ink);
           }`)
