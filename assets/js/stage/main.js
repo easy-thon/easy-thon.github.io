@@ -218,20 +218,27 @@
     }
     NAMES.forEach(name => prepare(formations[name], name));
 
-    // keys set off one after another: those leaving the stage first, then from the floor up and from left to right
+    // When to set off, from 0 (first) to 1: the keys leaving the stage go first, all at once, so that a formation
+    // goes as one (the prize chart sinks as a whole, not bar by bar); the keys that stay or come follow one after
+    // another, from the floor up and from left to right. Keys out of sight in both formations take no part.
     const orders = new Map();
     function orderOf(from, to) {
       const id = `${from}>${to}`;
       if (orders.has(id)) return orders.get(id);
-      const rank = keys.map((_, k) => {
-        const there = formations[to].slots[k];
-        const here = formations[from].slots[k];
-        if (!there) return -100 + (here ? here.x * 0.1 : 0);
-        return there.y * 4 + there.x * 0.12 + there.z * 0.03;
-      });
-      const sorted = rank.map((r, k) => [r, k]).sort((a, b) => a[0] - b[0]);
       const order = new Float32Array(N);
-      sorted.forEach(([, k], i) => { order[k] = N > 1 ? i / (N - 1) : 0; });
+      const coming = [];
+      let leaving = 0;
+      keys.forEach((_, k) => {
+        const there = formations[to].slots[k];
+        if (there) coming.push([there.y * 4 + there.x * 0.12 + there.z * 0.03, k]);
+        else if (formations[from].slots[k]) leaving++;
+      });
+      coming.sort((p, q) => p[0] - q[0]);
+      // with keys leaving, the rest wait their share of the change
+      const first = leaving / Math.max(1, leaving + coming.length);
+      coming.forEach(([, k], i) => {
+        order[k] = coming.length > 1 ? first + (1 - first) * (i / (coming.length - 1)) : 1;
+      });
       orders.set(id, order);
       return order;
     }
@@ -1061,7 +1068,28 @@
       model.quaternion.multiply(turnY).premultiply(turnX);
       fit(fa, a.frame, fits.a);
       fit(fb, b.frame, fits.b);
-      model.position.set(lerp(fits.a.x, fits.b.x, eased), lerp(fits.a.y, fits.b.y, eased) + sway * Math.sin(time * 0.8) * 0.02, 0);
+      let move = eased;   // how far the model has gone from scene a's place to scene b's
+      if (!narrow && a.frame === 'center' && a !== b) {
+        // Beside the story, the intro's keyboard (the centre frame) belongs to its scene, like the name under it: once
+        // the scene has been held it scrolls away with the page, so the name never runs over it. The next model comes
+        // up with the next scene, from below and a little faster than the page, so that it is still out of sight while
+        // the keyboard leaves at the top: the model changes places out of sight, and nothing crosses the name on the
+        // way (the keys rearrange themselves meanwhile, as everywhere). Behind the story (small screens) the model
+        // stays put as the backdrop.
+        const pageY = window.scrollY;
+        const unit = viewH / stageH;   // world units per CSS pixel where the model stands
+        const frameA = frameOf(a.frame);
+        const frameB = frameOf(b.frame);
+        const halfA = (fa.extent.h * fits.a.s) / unit / 2;   // half of each model's height on screen, in pixels
+        const halfB = (fb.extent.h * fits.b.s) / unit / 2;
+        const gone = a.b + frameA.top + frameA.height / 2 + halfA;   // the scroll at which the keyboard is out of sight
+        const below = stageH - (frameB.top + frameB.height / 2) + halfB;   // how far down b's model is out of sight
+        const rise = clamp(below / Math.max(1, b.a - gone - stageH * 0.12), 1, 4);
+        fits.a.y += Math.max(0, pageY - a.b) * unit;
+        fits.b.y -= Math.max(0, b.a - pageY) * rise * unit;
+        move = pageY < (gone + b.a - below / rise) / 2 ? 0 : 1;
+      }
+      model.position.set(lerp(fits.a.x, fits.b.x, move), lerp(fits.a.y, fits.b.y, move) + sway * Math.sin(time * 0.8) * 0.02, 0);
       model.scale.setScalar(lerp(fits.a.s, fits.b.s, eased));
       model.updateMatrixWorld();
 
