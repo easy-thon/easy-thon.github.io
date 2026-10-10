@@ -1,7 +1,7 @@
 // EasyThon 2026 · 3D stage loader
 // Checks for WebGL 2 and measures the browser's own frame pace, then loads three.js and the stage's own files (next
 // to this one) and starts the stage (main.js). Plain scripts throughout, so it also runs from a page opened straight
-// from disk, where module scripts are refused. Without WebGL the flat mark in the stage simply stays.
+// from disk, where module scripts are refused. Without WebGL the stage simply stays empty.
 (() => {
   const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.min.js';
   const PARTS = ['layouts', 'legends', 'keycap', 'main'];

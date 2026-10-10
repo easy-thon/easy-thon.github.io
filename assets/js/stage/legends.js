@@ -91,11 +91,21 @@
           else icon(spec.icon, x0 + pad, y0 + pad, s);
         }
         if (spec.figure) {
-          // a numeral in the middle: the clock face, and (big) the rank on a plinth
+          // a numeral in the middle: the clock face
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.font = `600 ${Math.round(cell * (spec.big ? 0.62 : 0.44))}px ${LATIN}`;
+          ctx.font = `600 ${Math.round(cell * 0.44)}px ${LATIN}`;
           ctx.fillText(spec.figure, x0 + cell / 2, y0 + cell / 2 + cell * 0.03);
+        }
+        if (spec.amount) {
+          // a prize: the amount large, and its unit under it
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'alphabetic';
+          ctx.font = `600 ${Math.round(cell * 0.4)}px ${LATIN}`;
+          ctx.fillText(spec.amount, x0 + cell / 2, y0 + cell * 0.6);
+          ctx.textBaseline = 'top';
+          ctx.font = `700 ${Math.round(cell * 0.19)}px ${HANGUL}`;
+          ctx.fillText(spec.unit, x0 + cell / 2, y0 + cell * 0.66);
         }
         ctx.restore();
       });

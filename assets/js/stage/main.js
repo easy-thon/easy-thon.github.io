@@ -1,8 +1,8 @@
 // EasyThon 2026 · the 3D stage
 // One small Korean keyboard is the whole cast. In the intro it sits centre stage and types the name, and plays
 // along when the visitor types; down the page its 39 keys hop into place for each chapter: a matrix counting the days
-// left, the day as a clock, the prize money as plinths crowned with their rank, and at the end a single key the size
-// of a hand that follows the apply link. The page's own lists are the data, so editing the HTML re-forms the 3D.
+// left, the day as a clock, the prizes as keys as big as the money, and at the end a single key the size of a hand
+// that follows the apply link. The page's own lists are the data, so editing the HTML re-forms the 3D.
 //
 //   boot.js      checks for WebGL 2, then loads three.js and the files below
 //   layouts.js   where every key goes in every formation (plain numbers)
@@ -41,20 +41,16 @@
     const sessions = starts.map((start, i) => ({ start, span: Math.max(15, (starts[i + 1] ?? start + 30) - start) }));
 
     const prizeRows = [...document.querySelectorAll('#prize-list [data-amount]')];
-    const prizes = prizeRows.flatMap((el, row) => Array.from({ length: Number(el.dataset.teams) || 1 }, () => ({
+    // one award per winning team, in the order of the list (no more than there are keys)
+    const awards = prizeRows.flatMap((el, row) => Array.from({ length: Number(el.dataset.teams) || 1 }, () => ({
       amount: Number(el.dataset.amount) || 0,
       row,
       tone: getComputedStyle(el).getPropertyValue('--tone').trim() || '#dcd9d2',
-    })));
-    // the runner-up stands to the left of the winner, everyone else to the right
-    const columns = prizes.length > 1 ? [prizes[1], prizes[0], ...prizes.slice(2)] : prizes;
-    // one layer of a plinth is 10만원, unless the plinths and their crowns would then need more keys than there are
-    const keysFor = value => columns.reduce((sum, column) => sum + Math.max(1, Math.round(column.amount / value)) + 1, 0);
-    const layerValue = [10, 20, 50, 100, 200, 500, 1000].find(value => keysFor(value) <= keyCount) || 1000;
+    }))).slice(0, keyCount).map((award, index) => ({ ...award, index }));
 
     const startAt = document.querySelector('[data-milestone="start"] time');
     const startTime = startAt ? new Date(startAt.dateTime).getTime() : NaN;
-    return { sessions, columns, layerValue, prizeRows, startTime };
+    return { sessions, awards, prizeRows, startTime };
   }
 
   parts.start = function start(THREE, { stage, canvas, pace = 1 / 60 }) {
@@ -76,7 +72,7 @@
     renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
-    // a GPU that cannot build the shaders gets the flat mark back instead of an empty stage
+    // a GPU that cannot build the shaders leaves the stage empty (as without WebGL) rather than half drawn
     let broken = false;
     renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
       broken = true;
@@ -198,10 +194,6 @@
         minY = Math.min(minY, corner.y); maxY = Math.max(maxY, corner.y);
       }
       f.extent = { w: maxX - minX, h: maxY - minY, x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
-    });
-    const columnTop = [];    // which key crowns which plinth
-    formations.prizes.slots.forEach((slot, k) => {
-      if (slot && slot.role === 'crown') columnTop[slot.index] = k;
     });
 
     // keys set off one after another: those leaving the stage first, then from the floor up and from left to right
@@ -349,7 +341,7 @@
       out.tint.copy(slot.tint);
       out.cell = slot.cell; out.legendX = slot.legendX; out.legendZ = slot.legendZ; out.legendSize = slot.legendSize;
       out.legendTurn = slot.legendTurn;
-      out.rough = slot.role === 'slab' ? 0.5 : 0.62;
+      out.rough = 0.62;
       out.rigid = false;
       out.metal = 0;
       out.glow = 0;
@@ -392,15 +384,11 @@
           out.rigid = true;
           break;
         }
-        case 'slab': {
-          // a plinth in focus breathes open, more toward the top
-          out.pos.y += (heat.prize[slot.prize] || 0) * slot.level * 0.03;
-          break;
-        }
-        case 'crown': {
-          // and its crown rises off it; the crowns sway a little, like things on show
-          out.pos.y += (heat.prize[slot.prize] || 0) * (slot.level * 0.03 + 0.3);
-          if (!reduceMotion) out.pos.y += Math.sin(time * 1.3 + slot.index * 1.9) * 0.025;
+        case 'award': {
+          // a prize in focus (its row on the page, or the key under the pointer) is pressed down, and glows a little
+          const h = heat.prize[slot.prize] || 0;
+          out.pos.y -= h * PRESS * slot.scale;
+          out.glow = 0.04 * h;
           break;
         }
         case 'enter':
@@ -418,8 +406,6 @@
     const footer = document.getElementById('footer');
     let marks = [];      // per scene: the scroll range over which it holds its formation
     let windows = [];    // small screens: [top, bottom] of each clear view of the stage, in page pixels
-    let width = 1;
-    let height = 1;
     const placements = {};   // per frame: centre and size in world units, top and height in stage pixels
     const frameOf = name => placements[name] || placements.side || { x: 0, y: 0, w: viewH, h: viewH, top: 0, height: 1 };
     let sized = '';
@@ -462,8 +448,6 @@
       const next = `${w}x${h}@${dpr}`;
       if (next !== sized) {
         sized = next;
-        width = w;
-        height = h;
         renderer.setPixelRatio(dpr);
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
@@ -547,19 +531,8 @@
       return found;
     }
 
-    // ----- Labels on the stage: a note in the corner for each formation, and the amounts over the stacks -----
+    // ----- Labels on the stage: a note in the corner for each formation -----
     const notes = [...stage.querySelectorAll('.stage-note[data-note]')].map(el => ({ el, name: el.dataset.note, shown: '' }));
-    const layerNote = stage.querySelector('[data-note-layer]');
-    if (layerNote) layerNote.textContent = `${page.layerValue}만원`;
-    const tags = page.columns.map(column => {
-      const tag = document.createElement('span');
-      tag.className = 'stage-tag';
-      tag.setAttribute('aria-hidden', 'true');
-      tag.innerHTML = `${column.amount}<small>만원</small>`;
-      stage.appendChild(tag);
-      return tag;
-    });
-    const point = new THREE.Vector3();
     const shown = {};
     const setVar = (name, value) => {
       const text = value.toFixed(2);
@@ -567,17 +540,6 @@
       shown[name] = text;
       stage.style.setProperty(name, text);
     };
-    function pin(el, k, lift) {
-      const key = keyState[k];
-      if (!el || !key) return;
-      point.copy(key.centre);
-      point.y += key.half.y + lift;
-      model.localToWorld(point).project(camera);
-      const x = ((point.x + 1) / 2) * width;
-      const y = ((1 - point.y) / 2) * height;
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
-    }
-
     // small screens: the model shows in full while nothing covers the middle of the frame, dims to a backdrop while the
     // story runs over it, and comes up part way while it changes formation (blend 0..1)
     function veil(blend) {
@@ -896,17 +858,16 @@
         linkOpen = !!applyLink();
         linkCheckedAt = now + 1000;
       }
+      // the notes step aside as the footer comes up over the stage
+      const clear = footer ? clamp((footer.getBoundingClientRect().top / window.innerHeight - 0.45) / 0.3, 0, 1) : 1;
       notes.forEach(note => {
         // the big key only invites a press while the application is open
-        const on = narrow || (note.name === 'enter' && !linkOpen) ? 0 : clamp((weight[note.name] - 0.75) / 0.25, 0, 1);
+        const on = narrow || (note.name === 'enter' && !linkOpen) ? 0 : clamp((weight[note.name] - 0.75) / 0.25, 0, 1) * clear;
         const text = on.toFixed(2);
         if (note.shown === text) return;
         note.shown = text;
         note.el.style.setProperty('--note', text);
       });
-      const tagsOn = !narrow ? clamp((weight.prizes - 0.75) / 0.25, 0, 1) : 0;
-      setVar('--tags', tagsOn);
-      if (tagsOn > 0) tags.forEach((tag, c) => pin(tag, columnTop[c], 0.28));
     }
 
     // drop the resolution if the device cannot keep up
@@ -998,7 +959,7 @@
       hovered = keyAt(pointer.x, pointer.y);
       const slot = hovered >= 0 ? leading().slots[hovered] : null;
       if (slot && slot.role === 'tick' && slot.session >= 0 && weight.day > 0.85) setHover('day', slot.session);
-      else if (slot && (slot.role === 'slab' || slot.role === 'crown') && weight.prizes > 0.85) setHover('prize', slot.prize);
+      else if (slot && slot.role === 'award' && weight.prizes > 0.85) setHover('prize', slot.prize);
       else setHover(null, null);
       stage.classList.toggle('is-pointing', onEnter(hovered) && !!applyLink());
     }

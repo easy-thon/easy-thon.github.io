@@ -252,6 +252,25 @@
     ways.forEach(el => watch.observe(el));
   }
 
+  // ----- The end of the page: the enter key opens the application too, as the big key on the stage says -----
+  const footer = document.getElementById('footer');
+  const footerApply = document.getElementById('footer-apply');
+  const footerKey = document.querySelector('.footer-key');
+  if (footer && footerApply && 'IntersectionObserver' in window) {
+    let atEnd = false;
+    new IntersectionObserver(([entry]) => { atEnd = entry.isIntersecting; }, { threshold: 0.35 }).observe(footer);
+    window.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      // only from the page itself: a focused link or button keeps its own enter
+      if (!atEnd || footerApply.hidden || document.activeElement !== document.body) return;
+      if (footerKey) footerKey.classList.add('is-pressed');
+      footerApply.click();
+    });
+    window.addEventListener('keyup', e => {
+      if (e.key === 'Enter' && footerKey) footerKey.classList.remove('is-pressed');
+    });
+  }
+
   // ----- Reveals: each block of a chapter rises in the first time it scrolls into view (see style.css) -----
   if (!reduceMotion && 'IntersectionObserver' in window) {
     scenes.forEach(scene => {

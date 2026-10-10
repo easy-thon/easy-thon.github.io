@@ -33,16 +33,6 @@
 <body>
   <a class="skip" href="#about">본문 바로가기</a>
 
-  <!-- Shared gradient for the flat E that stands in for the 3D one -->
-  <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
-    <defs>
-      <linearGradient id="g-mark" gradientUnits="userSpaceOnUse" x1="-1.2" y1="-1.45" x2="1.2" y2="1.45">
-        <stop offset="0" stop-color="#e8402f" />
-        <stop offset="1" stop-color="#a52617" />
-      </linearGradient>
-    </defs>
-  </svg>
-
   <header id="topbar" class="bar">
     <a href="#intro" class="brand" aria-label="EasyThon 2026 처음으로">
       <svg class="brand-mark" viewBox="-1.25 -1.5 2.5 3" aria-hidden="true">
@@ -67,17 +57,10 @@
   <!-- 3D stage (assets/js/stage/): one small keyboard whose keys re-form for every scene of the story, as each
        scene asks with data-scene. The canvas is fixed to the viewport and the model is fitted to one of the frames
        below, as each scene asks with data-frame: centre stage in the intro, beside the story after it. On small
-       screens both frames are a band at the top and the model is the page's backdrop. The flat E shows until WebGL
-       is up, and stays if it never is. -->
+       screens both frames are a band at the top and the model is the page's backdrop. Nothing stands in for it
+       while it loads: the plate rises and the keys drop in when it is ready. -->
   <div id="stage" class="stage" aria-hidden="true">
-    <div class="stage-frame" data-frame="center">
-      <svg class="stage-mark" viewBox="-2 -2 4 4" fill="url(#g-mark)">
-        <rect x="-1.2" y="-1.45" width="0.56" height="2.9" />
-        <rect x="-0.47" y="-1.45" width="1.67" height="0.56" />
-        <rect x="-0.47" y="-0.28" width="1.25" height="0.56" />
-        <rect x="-0.47" y="0.89" width="1.67" height="0.56" />
-      </svg>
-    </div>
+    <div class="stage-frame" data-frame="center"></div>
     <div class="stage-frame" data-frame="side"></div>
     <canvas id="scene"></canvas>
     <!-- what each formation shows, in the clear corner above it (wide screens) -->
@@ -87,7 +70,7 @@
       <span class="stage-note-time" data-note-time>09:00</span>
       <span class="stage-note-what" data-note-what>개회식</span>
     </p>
-    <p class="stage-note" data-note="prizes"><span class="stage-note-what">한 층 = <span data-note-layer>10만원</span></span></p>
+    <p class="stage-note" data-note="prizes"><span class="stage-note-what">키가 클수록 큰 상금</span></p>
     <p class="stage-note" data-note="enter"><span class="stage-note-what">눌러서 참가 신청</span></p>
   </div>
 
@@ -216,8 +199,8 @@
       </div>
     </section>
 
-    <!-- Prizes: the stage builds a plinth for each of data-teams, a layer per 10만원 of data-amount, crowned with a
-         key in the colour of --tone; effects.js adds them up for the totals -->
+    <!-- Prizes: the stage gives each of data-teams a key as big as data-amount (만원), printed with it, in the colour
+         of --tone; effects.js adds them up for the totals -->
     <section id="prizes" class="scene" data-scene="prizes" data-frame="side" aria-labelledby="prizes-title">
       <div class="scene-body">
         <header class="chapter-head">
@@ -282,7 +265,8 @@
     </section>
   </main>
 
-  <!-- Closing: one last, large way in -->
+  <!-- Closing: one last, large way in (the enter key opens it too, as the big key on the stage says), the event on
+       one line, and the small print -->
   <footer id="footer" class="footer">
     <div class="footer-cta">
       <p class="footer-note" data-apply-open>신청 마감 2026.11.03 (화) 밤 12시 <span class="dday" data-dday></span></p>
@@ -293,7 +277,26 @@
         <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 12 12 4M5.5 4H12v6.5" /></svg>
       </a>
       <p data-apply-closed hidden class="footer-apply is-closed">신청 마감</p>
+      <p class="footer-key" data-apply-open aria-hidden="true"><kbd>enter <span>↵</span></kbd>키를 눌러도 열립니다</p>
     </div>
+    <dl class="footer-facts">
+      <div>
+        <dt>일시</dt>
+        <dd>2026.11.14 (토) <span data-hours>09:00 – 19:00</span></dd>
+      </div>
+      <div>
+        <dt>장소</dt>
+        <dd>미디어센터 507호</dd>
+      </div>
+      <div>
+        <dt>참가비</dt>
+        <dd>무료</dd>
+      </div>
+      <div>
+        <dt>총 상금</dt>
+        <dd data-prize-total>270만원</dd>
+      </div>
+    </dl>
     <div class="footer-grid">
       <div>
         <p class="footer-name">EasyThon 2026</p>

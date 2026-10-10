@@ -166,11 +166,6 @@ svg {
   transition: transform 0.4s var(--ease-out);
 }
 
-.defs {
-  position: absolute;
-  overflow: hidden;
-}
-
 .skip {
   position: fixed;
   top: 8px;
@@ -386,9 +381,9 @@ svg {
 }
 
 /* ---------- Stage ---------- */
-/* Fixed to the viewport once the 3D is up (until then, or without WebGL, the flat mark scrolls away with the
-   intro). On small screens it sits behind the story and the stage sets --show: in full above the intro, a
-   backdrop behind the text, and up again while it changes shape between scenes. */
+/* Fixed to the viewport once the 3D is up; until then (and without WebGL) it is empty and nothing stands in for
+   it. On small screens it sits behind the story and the stage sets --show: in full above the intro, a backdrop
+   behind the text, and up again while it changes shape between scenes. */
 .stage {
   position: absolute;
   top: 0;
@@ -420,52 +415,29 @@ svg {
   opacity: 1;
 }
 
-/* the boxes the model is fitted to (the stage measures them); what they hold sits on the model's centre */
+/* the boxes the model is fitted to (the stage measures them) */
 .stage-frame {
   position: absolute;
   left: 0;
   right: 0;
   top: var(--bar-h);
   height: var(--frame-h);
-  display: grid;
-  place-items: center;
   pointer-events: none;
 }
 
-.stage-frame > * {
-  grid-area: 1 / 1;
-}
-
-/* Flat stand-in for the 3D board: shown until WebGL is up, and kept if it never is. It steps aside quickly,
-   because the plate rises and the keys drop in from above in its place */
-.stage-mark {
-  width: auto;
-  height: 50%;
-  transition: opacity 0.25s ease;
-}
-
-.stage.is-live .stage-mark {
-  opacity: 0;
-}
-
-/* Labels on the stage, faded in by the stage with --note and --tags. Behind the story they would only be text
-   under text, so they show beside it only. */
-.stage-note,
-.stage-tag {
+/* What the formation on stage shows (for the clock, the session in focus), in the clear corner above it; the stage
+   fades it in with --note. Behind the story it would only be text under text, so it shows beside it only. */
+.stage-note {
   display: none;
   position: absolute;
-  z-index: 2;
-  margin: 0;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-/* what the formation on stage shows (the session in focus, for the chart), in the clear corner above it */
-.stage-note {
   top: calc(var(--bar-h) + 9vh);
   right: var(--margin);
+  z-index: 2;
+  margin: 0;
   text-align: right;
+  white-space: nowrap;
   opacity: var(--note, 0);
+  pointer-events: none;
 }
 
 .stage-note-time {
@@ -484,27 +456,6 @@ svg {
   font-size: 14px;
   font-weight: 700;
   color: var(--ink-2);
-}
-
-/* the amount, over its stack of chips; the stage moves it there */
-.stage-tag {
-  top: 0;
-  left: 0;
-  font-family: var(--display);
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  opacity: var(--tags, 0);
-  will-change: transform;
-}
-
-.stage-tag small {
-  margin-left: 0.1em;
-  font-family: var(--sans);
-  font-size: 0.55em;
-  font-weight: 700;
-  letter-spacing: 0;
 }
 
 /* ---------- Story ---------- */
@@ -1151,11 +1102,81 @@ a.footer-apply:hover .arrow {
   color: rgba(239, 238, 233, 0.36);
 }
 
+/* the enter key opens it too (effects.js); shown only where there is a keyboard to press it on */
+.footer-key {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  font-size: 13px;
+  color: rgba(239, 238, 233, 0.62);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .footer-key {
+    display: flex;
+  }
+}
+
+.footer-key kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 6px;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--paper);
+  border: 1px solid rgba(239, 238, 233, 0.34);
+  border-radius: 5px;
+  box-shadow: inset 0 -2px 0 rgba(239, 238, 233, 0.16);
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out), background-color 0.15s, border-color 0.15s;
+}
+
+/* and it goes down while the way in is under the pointer, or while enter is held */
+a.footer-apply:hover ~ .footer-key kbd,
+.footer-key.is-pressed kbd {
+  border-color: var(--red);
+  background-color: var(--red);
+  box-shadow: none;
+  transform: translateY(2px);
+}
+
+/* the event on one line: when, where, what it costs, what is at stake */
+.footer-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px var(--gap);
+  margin-top: 64px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(239, 238, 233, 0.2);
+}
+
+.footer-facts dt {
+  font-size: 12px;
+  color: rgba(239, 238, 233, 0.5);
+}
+
+.footer-facts dd {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+.footer-facts dd span {
+  display: block;
+  font-weight: 500;
+  color: rgba(239, 238, 233, 0.62);
+}
+
 .footer-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 20px;
-  margin-top: 72px;
+  margin-top: 48px;
   padding-top: 16px;
   border-top: 1px solid rgba(239, 238, 233, 0.2);
   font-size: 13px;
@@ -1406,8 +1427,7 @@ a.footer-apply:hover .arrow {
     height: auto;
   }
 
-  .stage-note,
-  .stage-tag {
+  .stage-note {
     display: block;
   }
 
@@ -1567,10 +1587,24 @@ a.footer-apply:hover .arrow {
     padding-bottom: 32px;
   }
 
+  .footer-facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: clamp(72px, 11vh, 128px);
+  }
+
+  .footer-facts dd {
+    font-size: 17px;
+  }
+
+  .footer-facts dd span {
+    display: inline;
+    margin-left: 6px;
+  }
+
   .footer-grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
     column-gap: var(--gap);
-    margin-top: clamp(80px, 14vh, 160px);
+    margin-top: clamp(48px, 8vh, 96px);
   }
 
   .footer-grid > :first-child {

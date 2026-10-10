@@ -10,7 +10,7 @@
   const PLATE_H = 0.5;             // plate thickness
   const MARGIN = 0.42;             // plate border around what stands on it
   const CAP_PROFILE = [0.11, 0.035];   // a key cap: how far the top is drawn in (taper), and its dish
-  const FLAT_PROFILE = [0.015, 0];     // straight walls and a flat top: clock hands, plinth layers
+  const FLAT_PROFILE = [0.015, 0];     // straight walls and a flat top: the clock's hands
 
   const COLORS = {
     cap: '#f4f2ed',     // porcelain caps
@@ -91,9 +91,9 @@
       else if (key.sub) specs.set(key.code, { main: key.main, sub: key.sub });
       else specs.set(key.code, key.kind === 'mod' ? { word: key.main } : { main: key.main });
     });
-    // the clock face, and the rank on each plinth
+    // the clock face, and the amount on each prize key
     for (let hour = 1; hour <= 12; hour++) specs.set(`clock:${hour}`, { figure: String(hour) });
-    page.columns.forEach(column => specs.set(`rank:${column.row + 1}`, { figure: String(column.row + 1), big: true }));
+    page.awards.forEach(award => specs.set(`amount:${award.amount}`, { amount: String(award.amount), unit: '만원' }));
     return specs;
   }
 
@@ -156,31 +156,41 @@
     return { targets, plate: { w: side, d: side }, view: [0.98, -0.3] };
   }
 
-  // One plinth per winning team, built of a layer per layerValue (만원) and crowned with a key that shows its rank,
-  // in the colour of its row on the page. The plinths are white; the colour is on the crowns.
-  function podium(page) {
+  // The prizes as a pad of keys: one per winning team, as big as its prize (the top of a key grows in area with the
+  // amount), printed with the amount and in the colour of its row on the page, two to a row. Nothing is stacked:
+  // the size of a key is the money.
+  function keyset(page) {
     const targets = [];
-    const pitch = 1.62;
-    const side = 1.3;
-    const layer = 0.3;
-    const seam = 0.03;
-    page.columns.forEach((column, c) => {
-      const x = (c - (page.columns.length - 1) / 2) * pitch;
-      const count = Math.max(1, Math.round(column.amount / page.layerValue));
-      for (let level = 0; level < count; level++) {
-        targets.push(cap({
-          x, y: layer / 2 + level * (layer + seam), w: side, d: side, h: layer, profile: FLAT_PROFILE,
-          role: 'slab', index: c, prize: column.row, level,
-        }));
-      }
-      targets.push(cap({
-        x, y: count * (layer + seam) - seam + capY(), color: column.tone,
-        legend: { id: `rank:${column.row + 1}`, at: [0, 0], size: 0.66 },
-        role: 'crown', index: c, prize: column.row, level: count,
-      }));
+    const most = Math.max(1, ...page.awards.map(award => award.amount));
+    const base = [1.4 - GAP, 1.2 - GAP];   // a prize key before it is scaled up
+    const biggest = 2;
+    const gap = 0.42;
+    const rows = [];
+    page.awards.forEach((award, i) => {
+      if (i % 2 === 0) rows.push([]);
+      rows[rows.length - 1].push({ award, scale: biggest * Math.sqrt(Math.max(award.amount, 1) / most) });
     });
-    const span = (page.columns.length - 1) * pitch + side;
-    return { targets, plate: { w: span + MARGIN * 2, d: side + MARGIN * 2 }, view: [0.42, -0.5] };
+    const depths = rows.map(row => Math.max(...row.map(key => base[1] * key.scale)));
+    const depth = depths.reduce((sum, d) => sum + d, 0) + gap * (rows.length - 1);
+    let width = 0;
+    let z = -depth / 2;
+    rows.forEach((row, r) => {
+      const span = row.reduce((sum, key) => sum + base[0] * key.scale, 0) + gap * (row.length - 1);
+      width = Math.max(width, span);
+      let x = -span / 2;
+      row.forEach(({ award, scale }) => {
+        targets.push(cap({
+          x: x + (base[0] * scale) / 2, z: z + depths[r] / 2, y: capY() * scale, w: base[0], d: base[1], scale,
+          color: award.tone, legend: { id: `amount:${award.amount}`, at: [0, 0], size: 0.9 },
+          role: 'award', index: award.index, prize: award.row,
+        }));
+        x += base[0] * scale + gap;
+      });
+      z += depths[r] + gap;
+    });
+    // the pad's border a little wider than the board's, as for the big key at the end
+    const border = MARGIN * 2.2;
+    return { targets, plate: { w: width + border, d: depth + border }, view: [0.72, -0.42] };
   }
 
   // a single key, the size of a hand: the way in
@@ -234,8 +244,8 @@
     const chart = clock(page);
     const chartSlots = assign(keys, standing(matrixSlots, board.slots), chart.targets);
 
-    const stacks = podium(page);
-    const stackSlots = assign(keys, standing(chartSlots, standing(matrixSlots, board.slots)), stacks.targets);
+    const prizePad = keyset(page);
+    const prizeSlots = assign(keys, standing(chartSlots, standing(matrixSlots, board.slots)), prizePad.targets);
 
     const pad = enter();
     const padSlots = keys.map(key => (key.code === 'Enter' ? pad.target : { hidden: true }));
@@ -246,7 +256,7 @@
         keyboard: { slots: board.slots, plate: board.plate, view: board.view },
         countdown: { slots: matrixSlots, plate: matrix.plate, view: matrix.view },
         day: { slots: chartSlots, plate: chart.plate, view: chart.view },
-        prizes: { slots: stackSlots, plate: stacks.plate, view: stacks.view },
+        prizes: { slots: prizeSlots, plate: prizePad.plate, view: prizePad.view },
         enter: { slots: padSlots, plate: pad.plate, view: pad.view },
       },
     };
