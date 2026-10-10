@@ -51,7 +51,7 @@
 
   let scrollStep = 0;     // where the scroll position is in the day
   let rowStep = null;     // a row under the pointer
-  let stageStep = null;   // a session key under the pointer, reported by the stage
+  let stageStep = null;   // a key of the clock's dial under the pointer, reported by the stage
   let lit = -1;
   let led = -1;
   // the ink block behind the lit row slides to it
@@ -62,7 +62,7 @@
     timeline.style.setProperty('--h', `${row.offsetHeight}px`);
   }
   function showStep() {
-    const lead = rowStep ?? scrollStep;   // the chart on the stage moves to this one
+    const lead = rowStep ?? scrollStep;   // the clock on the stage turns to this one
     const step = stageStep ?? lead;       // this one is lit
     if (step !== lit && rows[step]) {
       lit = step;

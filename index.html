@@ -87,7 +87,7 @@
       <span class="stage-note-time" data-note-time>09:00</span>
       <span class="stage-note-what" data-note-what>개회식</span>
     </p>
-    <p class="stage-note" data-note="prizes"><span class="stage-note-what">칩 하나 = <span data-note-chip>10만원</span></span></p>
+    <p class="stage-note" data-note="prizes"><span class="stage-note-what">한 층 = <span data-note-layer>10만원</span></span></p>
     <p class="stage-note" data-note="enter"><span class="stage-note-what">눌러서 참가 신청</span></p>
   </div>
 
@@ -149,8 +149,8 @@
       </div>
     </section>
 
-    <!-- Schedule: the scroll (or the pointer) steps through the day, and the chart on the stage follows it.
-         The stage sizes one key per session from data-time, so the list is the only place to edit. -->
+    <!-- Schedule: the scroll (or the pointer) steps through the day, and the clock on the stage follows it.
+         The stage reads data-time for the dial and the hands, so the list is the only place to edit. -->
     <section id="schedule" class="scene scene-steps" data-scene="day" data-frame="side" aria-labelledby="schedule-title">
       <div class="scene-pin">
         <div class="scene-body">
@@ -216,8 +216,8 @@
       </div>
     </section>
 
-    <!-- Prizes: the stage stacks one chip per 10만원 of data-amount for each of data-teams, in the colour of --tone;
-         effects.js adds them up for the totals -->
+    <!-- Prizes: the stage builds a plinth for each of data-teams, a layer per 10만원 of data-amount, crowned with a
+         key in the colour of --tone; effects.js adds them up for the totals -->
     <section id="prizes" class="scene" data-scene="prizes" data-frame="side" aria-labelledby="prizes-title">
       <div class="scene-body">
         <header class="chapter-head">
@@ -404,7 +404,7 @@
   <!-- smooth wheel scrolling on desktop; effects.js starts it, and the page scrolls natively without it -->
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.26/dist/lenis.min.js" defer></script>
   <script src="assets/js/effects.js" defer></script>
-  <script type="module" src="assets/js/stage/boot.js"></script>
+  <script src="assets/js/stage/boot.js" defer></script>
 </body>
 
 </html>
