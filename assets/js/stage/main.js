@@ -15,7 +15,9 @@
 //
 // The canvas is fixed to the viewport. Each scene names a formation (data-scene) and a frame (data-frame, a box in
 // the stage the model is fitted to). Between two scenes the keys set off for the next formation one after another,
-// each on a small arc, and every key follows its path on a spring, so stopping the scroll lets them settle.
+// each on a small arc, and every key follows its path on a spring, so stopping the scroll lets them settle. On small
+// screens the model is never behind the text: it stands in the intro's clear window, goes up with it, and docks into
+// the top bar, where it changes shape for the rest of the page.
 // Events on document (the other end is in effects.js):
 //   stage:focus  { group, index }   a list row is in focus      (effects.js -> here)
 //   stage:hover  { group, index }   a key is under the pointer  (here -> effects.js)
@@ -163,7 +165,12 @@
 
     const legends = createLegends(THREE, legendSpecs(keys, page), { size: narrow ? 1024 : 2048 });
     // drawn again once the faces arrive, unless they were here already
-    if (!legendFontsReady()) legendFonts().then(() => legends.redraw());
+    if (!legendFontsReady()) {
+      legendFonts().then(() => {
+        legends.redraw();
+        stale = dirty = true;
+      });
+    }
     legends.texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
     const color = value => new THREE.Color(value);
@@ -403,10 +410,10 @@
       out.glow = 0;
       switch (slot.role) {
         case 'pixel': {
-          // now and then a ripple runs along the sign, and lights it as it goes
+          // now and then a ripple runs along the sign, and lights it as it goes (not in the top bar)
           if (!reduceMotion) {
             const run = (time % 5.5) * 8 - slot.col - slot.row * 0.4;
-            const crest = Math.exp(-run * run * 0.6);
+            const crest = Math.exp(-run * run * 0.6) * (1 - dock);
             out.pos.y += 0.09 * crest;
             out.glow = 0.07 * crest;
           }
@@ -458,9 +465,15 @@
     const sceneEls = [...document.querySelectorAll('.scene[data-scene]')];
     const windowEls = [...document.querySelectorAll('[data-window]')];
     const frameEls = [...stage.querySelectorAll('[data-frame]')];
+    const slotEl = document.querySelector('[data-stage-slot]');
     const footer = document.getElementById('footer');
     let marks = [];      // per scene: the scroll range over which it holds its formation
     let windows = [];    // small screens: [top, bottom] of each clear view of the stage, in page pixels
+    // Small screens: past the intro the model sits in the top bar, in the room between the name and the menu, which
+    // is then the 'side' frame. Where that room is narrower than this, the model fades out past the intro instead
+    const SLOT_MIN = 48;   // px
+    let slotted = false;
+    let dock = 0;          // small screens: 0 in the intro's window .. 1 in the top bar
     const placements = {};   // per frame: centre and size in world units, top and height in stage pixels
     const frameOf = name => placements[name] || placements.side || { x: 0, y: 0, w: viewH, h: viewH, top: 0, height: 1 };
     let sized = '';
@@ -520,16 +533,16 @@
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
+        stale = dirty = true;   // a new size clears the canvas
       }
       const room = stage.getBoundingClientRect();
       stageLeft = room.left;
       stageTop = room.top;
       const unit = viewH / h;   // world units per pixel where the model stands
-      frameEls.forEach(el => {
-        const box = el.getBoundingClientRect();
+      const place = box => {
         const fw = box.width || w;
         const fh = box.height || h;
-        placements[el.dataset.frame] = {
+        return {
           x: (box.left - room.left + fw / 2 - w / 2) * unit,
           y: (h / 2 - (box.top - room.top) - fh / 2) * unit,
           w: fw * unit,
@@ -537,21 +550,53 @@
           top: box.top - room.top,
           height: fh,
         };
-      });
+      };
+      frameEls.forEach(el => { placements[el.dataset.frame] = place(el.getBoundingClientRect()); });
+      // the stage shows through the top bar only over the room the model docks into (see .stage)
+      const bay = narrow && slotEl ? slotEl.getBoundingClientRect() : null;
+      slotted = !!bay && bay.width >= SLOT_MIN;
+      if (slotted) {
+        placements.side = place(bay);
+        stage.style.setProperty('--slot-l', `${(bay.left - room.left).toFixed(1)}px`);
+        stage.style.setProperty('--slot-w', `${bay.width.toFixed(1)}px`);
+      } else {
+        stage.style.removeProperty('--slot-l');
+        stage.style.removeProperty('--slot-w');
+      }
       measure();
     }
 
     // how big a formation is drawn in a frame, and where its centre goes
-    const fits = { a: { s: 1, x: 0, y: 0 }, b: { s: 1, x: 0, y: 0 } };
     function fit(f, frameName, out) {
       const frame = frameOf(frameName);
-      // on a phone the board is wider than the screen: it is cropped at both ends, like a close-up, so the keys read
-      let fill = narrow ? 0.92 : frameName === 'center' ? 0.9 : 0.76;
-      if (narrow && f.name === 'keyboard') fill = 1.3;
-      out.s = Math.min(frame.w / f.extent.w, frame.h / f.extent.h) * fill;
+      const fill = narrow ? 0.92 : frameName === 'center' ? 0.9 : 0.76;
+      // on a phone the board in the intro is wider than the screen: it is cropped at both ends, like a close-up, so
+      // the keys read (never at the top and bottom, and in the top bar it is whole)
+      const across = narrow && f.name === 'keyboard' && frameName === 'center' ? 1.3 : fill;
+      out.s = Math.min((frame.w / f.extent.w) * across, (frame.h / f.extent.h) * fill);
       out.x = frame.x - f.extent.x * out.s;
       out.y = frame.y - f.extent.y * out.s;
       return out;
+    }
+    // the formations on either side of the scroll, each fitted to a frame, mixed as far as the change has got
+    const fitA = { s: 1, x: 0, y: 0 };
+    const fitB = { s: 1, x: 0, y: 0 };
+    function fitBetween(fa, frameA, fb, frameB, t, out) {
+      fit(fa, frameA, fitA);
+      fit(fb, frameB, fitB);
+      out.s = lerp(fitA.s, fitB.s, t);
+      out.x = lerp(fitA.x, fitB.x, t);
+      out.y = lerp(fitA.y, fitB.y, t);
+      return out;
+    }
+    const spot = { s: 1, x: 0, y: 0 };     // where the model stands this frame
+    const inBar = { s: 1, x: 0, y: 0 };    // small screens: where it stands in the top bar
+    // Small screens: how far the model has gone from the intro's window into the top bar. It is there by the time the
+    // bottom of the window reaches the bar, before the name comes up under it
+    function docking(pageY) {
+      if (!windows.length) return 1;
+      const [top, bottom] = windows[0];
+      return smooth(clamp((pageY - top) / Math.max(1, bottom - top - frameOf('center').top), 0, 1));
     }
 
     // ----- Picking: which key is under the pointer -----
@@ -635,18 +680,6 @@
         tag.el.style.setProperty('--tag', dim);
       }
     }
-    // small screens: the model shows in full while nothing covers the middle of the frame, dims to a backdrop while the
-    // story runs over it, and comes up part way while it changes formation (blend 0..1)
-    function veil(blend) {
-      const frame = frameOf('center');
-      const top = window.scrollY + frame.top + frame.height * 0.2;
-      const span = frame.height * 0.6;
-      let open = 0;
-      windows.forEach(([a, b]) => { open = Math.max(open, (Math.min(b, top + span) - Math.max(a, top)) / span); });
-      const t = clamp(open, 0, 1);
-      return Math.max(lerp(0.18, 1, t * t * (3 - 2 * t)), lerp(0.18, 0.3, Math.sin(Math.PI * blend)));
-    }
-
     // ----- Typing: the board types the name, the visitor can type on it, and the big key waits to be pressed -----
     const TYPE_GAPS = [170, 130, 150, 210, 120, 160, 140];   // ms before each letter after the first
     const typing = { at: 0, i: 0 };
@@ -808,6 +841,7 @@
     let lookGoalX = 0;
     let lookGoalY = 0;
     let dirty = true;
+    let stale = true;    // the canvas has to be drawn again, whatever moved: a new size, new legends
     let movedAt = 0;     // last scroll, resize or pointer move
     let stirredAt = 0;   // last frame in which anything moved besides the slow sway (see update)
     let liveAt = 0;      // when the stage first went live
@@ -912,8 +946,13 @@
 
       // where the scroll is (Lenis already eases the scroll itself)
       scrollY = reduceMotion ? window.scrollY : damp(scrollY, window.scrollY, window.lenis ? 24 : 10, dt);
-      if (Math.abs(window.scrollY - scrollY) > 0.5) stir = true;
+      const easing = Math.abs(window.scrollY - scrollY) > 0.5;
+      const before = blend;
       locate();
+      if (blend !== before) stir = true;
+      // Small screens: docked in the top bar, the model only moves with what is being read (the scene, the session or
+      // the prize in focus): it does not sway, ripple, type or ask to be pressed
+      dock = narrow ? docking(window.scrollY) : 0;
       for (const name of NAMES) weight[name] = 0;
       weight[a.shape] += 1 - blend;
       weight[b.shape] += blend;
@@ -928,25 +967,25 @@
       if (Math.abs(step - stepGoal) > 0.002 || heat.day.some((v, i) => Math.abs(v - +(i === litStep)) > 0.003)
         || heat.prize.some((v, i) => Math.abs(v - +(i === litRow)) > 0.003)) stir = true;
       // the hands sweep to the session in focus: the minute hand round once for every hour on the way, at most four
-      // turns a second
+      // turns a second (off stage they are simply set)
       const lit = page.sessions[clamp(litStep, 0, page.sessions.length - 1)];
       if (lit) {
-        if (reduceMotion) clockTime = lit.start;
+        if (reduceMotion || weight.day === 0) clockTime = lit.start;
         else clockTime += clamp((lit.start - clockTime) * (1 - Math.exp(-5 * dt)), -240 * dt, 240 * dt);
         if (Math.abs(lit.start - clockTime) > 0.5) stir = true;
       }
 
       // the board types the name while it is centre stage and nobody else is typing
-      const boardUp = weight.keyboard > 0.85 && assembled >= 1 && !reduceMotion && now - humanAt > 3000;
+      const boardUp = weight.keyboard > 0.85 && dock < 0.5 && assembled >= 1 && !reduceMotion && now - humanAt > 3000;
       if (!boardUp) typing.at = Math.max(typing.at, now + 700);
       else if (now >= typing.at) {
         tap(keyIndex.get(BRAND[typing.i]), 105);
         typing.at = now + (typing.i === BRAND.length - 1 ? 2600 : TYPE_GAPS[typing.i]);
         typing.i = (typing.i + 1) % BRAND.length;
       }
-      // the big key asks to be pressed, now and then
+      // the big key asks to be pressed, now and then (beside the story, where it can be)
       const enterKey = keyIndex.get('Enter');
-      if (weight.enter > 0.9 && !reduceMotion && hovered !== enterKey && now >= pulseAt) {
+      if (weight.enter > 0.9 && !narrow && !reduceMotion && hovered !== enterKey && now >= pulseAt) {
         tap(enterKey, 150);
         pulseAt = now + 2800;
       } else if (weight.enter <= 0.9) pulseAt = Math.max(pulseAt, now + 900);
@@ -1060,8 +1099,8 @@
       if (Math.abs(yaw) + Math.abs(pitch) > 0.002 || Math.abs(lookX - lookGoalX) + Math.abs(lookY - lookGoalY) > 0.003) {
         stir = true;
       }
-      const sway = reduceMotion ? 0 : 1;
-      // behind the story nobody turns it by hand, so it swings a little wider on its own
+      const sway = reduceMotion ? 0 : 1 - dock;
+      // on a phone nobody turns it by hand, so in the intro it swings a little wider on its own
       const swing = narrow ? Math.sin(time * 0.3) * 0.16 : Math.sin(time * 0.45) * 0.06;
       model.quaternion.slerpQuaternions(fa.turn, fb.turn, eased);
       // the first show also swings the model round to face the viewer
@@ -1069,10 +1108,22 @@
       turnY.setFromAxisAngle(UP, yaw + lookX * 0.12 + sway * swing + entrance);
       turnX.setFromAxisAngle(RIGHT, pitch - lookY * 0.06 + sway * Math.sin(time * 0.37) * 0.02);
       model.quaternion.multiply(turnY).premultiply(turnX);
-      fit(fa, a.frame, fits.a);
-      fit(fb, b.frame, fits.b);
-      model.position.set(lerp(fits.a.x, fits.b.x, eased), lerp(fits.a.y, fits.b.y, eased) + sway * Math.sin(time * 0.8) * 0.02, 0);
-      model.scale.setScalar(lerp(fits.a.s, fits.b.s, eased));
+      if (!narrow) fitBetween(fa, a.frame, fb, b.frame, eased, spot);
+      else {
+        // Small screens: in the intro's window, which goes up with the page (the window is in the page, the stage
+        // fixed), and from there into the top bar. On the way it shrinks at an even pace, and it never comes down
+        // over the name: it is always above where the window and the bar would put it
+        fitBetween(fa, 'center', fb, 'center', eased, spot);
+        spot.y += (window.scrollY - (windows.length ? windows[0][0] : 0)) * (viewH / stageH);
+        if (slotted) {
+          fitBetween(fa, 'side', fb, 'side', eased, inBar);
+          spot.x = lerp(spot.x, inBar.x, dock);
+          spot.y = lerp(spot.y, inBar.y, dock);
+          spot.s *= Math.pow(inBar.s / spot.s, dock);
+        }
+      }
+      model.position.set(spot.x, spot.y + sway * Math.sin(time * 0.8) * 0.02, 0);
+      model.scale.setScalar(spot.s);
       model.updateMatrixWorld();
 
       // ----- the sun's shadow covers the model wherever it stands -----
@@ -1093,8 +1144,9 @@
       // the keys move under a pointer that stands still, so what it is over is asked again every frame
       if (pointer.over) pick();
 
-      // ----- what the overlays show, and how far the backdrop is dimmed -----
-      setVar('--show', narrow ? veil(blend) : 1);
+      // ----- what the overlays show -----
+      // small screens with no room in the top bar: the model goes up with the intro and fades on the way
+      setVar('--show', narrow && !slotted ? 1 - dock : 1);
       if (now >= linkCheckedAt) {
         linkOpen = !!applyLink();
         linkCheckedAt = now + 1000;
@@ -1113,7 +1165,8 @@
       const tagsOn = narrow ? 0 : clamp((weight.prizes - 0.75) / 0.25, 0, 1) * clear;
       setVar('--tags', tagsOn);
       if (tagsOn > 0) tags.forEach(pin);
-      if (stir) stirredAt = now;
+      if (stir || easing) stirredAt = now;
+      return stir;
     }
 
     // The resolution follows what the device can do. Frames are timed in one-second runs, only while the model moves
@@ -1156,11 +1209,19 @@
     let raf = 0;
     let last = 0;
     let visible = true;
+    // the model as last drawn
+    const drawn = new THREE.Matrix4();
+    function moved() {
+      const at = model.matrixWorld.elements;
+      for (let i = 0; i < 16; i++) if (Math.abs(at[i] - drawn.elements[i]) > 1e-5) return true;
+      return false;
+    }
     function tick(now) {
       if (broken) return;
       raf = requestAnimationFrame(tick);
-      // nothing to draw into yet, out of view or under the footer, or (reduced motion) nothing has changed
-      if (!sized || !visible || covered || (reduceMotion && !dirty)) {
+      // nothing to draw into yet, out of view or (beside the story) under the footer, or (reduced motion) nothing has
+      // changed
+      if (!sized || !visible || (covered && !narrow) || (reduceMotion && !dirty)) {
         last = now;
         return;
       }
@@ -1170,9 +1231,16 @@
       const idle = assembled >= 1 && now - movedAt > 600 && now - stirredAt > 400;
       if (delta < (idle ? 1 / 34 : 1 / 80)) return;
       last = now;
+      const asked = dirty;
       dirty = false;
-      update(Math.min(delta, 0.05));
+      const stirred = update(Math.min(delta, 0.05));
+      // Drawn only when something on it has changed. On a small screen past the intro that is seldom: the model holds
+      // still in the top bar while the page scrolls under it. Faded out (no room in the bar), it is not drawn at all
+      if (narrow && !slotted && dock >= 1) return;
+      if (!stale && !stirred && !(reduceMotion && asked) && !moved()) return;
+      stale = false;
       renderer.render(scene, camera);
+      drawn.copy(model.matrixWorld);
       if (!idle) watchFrameRate(delta, now);
     }
     function run() {
@@ -1195,6 +1263,7 @@
       }
       plate.w = formations[a.shape].plate.w;
       plate.d = formations[a.shape].plate.d;
+      stale = dirty = true;
       last = performance.now();
       watchFrom = last + 3500;   // the opening, and the fonts and textures that arrive with it
       cancelAnimationFrame(raf);
@@ -1242,8 +1311,11 @@
       movedAt = performance.now();
     }, { passive: true });
     if ('ResizeObserver' in window) {
-      // the stage changes size with the layout; the page changes height with its fonts
-      new ResizeObserver(refresh).observe(stage);
+      // the stage changes size with the layout; the page changes height with its fonts, and so does the room in the
+      // top bar
+      const sizes = new ResizeObserver(refresh);
+      sizes.observe(stage);
+      if (slotEl) sizes.observe(slotEl);
       new ResizeObserver(() => { measure(); dirty = true; }).observe(document.body);
     }
     if ('IntersectionObserver' in window) {

@@ -49,7 +49,7 @@
   --bar-h: 56px;
   --margin: 20px;
   --gap: 12px;
-  /* small screens: the band at the top of the backdrop the 3D model is fitted to (see .stage-frame) */
+  /* small screens: the band at the top of the intro the 3D model is fitted to (see .stage-frame, .scene-window) */
   --frame-h: min(42vh, 92vw);
 }
 
@@ -261,6 +261,15 @@ svg {
   fill: var(--red);
 }
 
+/* small screens: the room between the name and the menu, where the 3D model sits past the intro (see .stage, which
+   fades it out across the margins here) */
+.bar-slot {
+  flex: 1 1 0;
+  align-self: stretch;
+  min-width: 0;
+  margin: 6px 12px;
+}
+
 .nav {
   display: flex;
   margin-right: -8px;
@@ -392,20 +401,31 @@ svg {
 
 /* ---------- Stage ---------- */
 /* Fixed to the viewport once the 3D is up; until then (and without WebGL) it is empty and nothing stands in for
-   it. On small screens it sits behind the story and the stage sets --show: in full above the intro, a backdrop
-   behind the text, and up again while it changes shape between scenes. */
+   it. On small screens the model is never behind the text: it fills the clear window of the intro, and past it it
+   sits small in the top bar, in .bar-slot. So here the stage lies over the bar, masked to everything under the bar
+   and to the slot (the stage sets --slot-l and --slot-w), which fades out across its margins: on its way into the
+   slot the keyboard slides under the bar, never over the name or the menu. Where the bar has no room for it, the
+   stage fades it out past the intro (--show). */
 .stage {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 0;
+  z-index: 60;
   height: 100vh;
   height: 100lvh;
   opacity: var(--show, 1);
   pointer-events: none;
   -webkit-user-select: none;
   user-select: none;
+  -webkit-mask:
+    linear-gradient(#000, #000) 0 var(--bar-h) / 100% 100% no-repeat,
+    linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent)
+      calc(var(--slot-l, 0px) - 12px) 0 / calc(var(--slot-w, -24px) + 24px) var(--bar-h) no-repeat;
+  mask:
+    linear-gradient(#000, #000) 0 var(--bar-h) / 100% 100% no-repeat,
+    linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent)
+      calc(var(--slot-l, 0px) - 12px) 0 / calc(var(--slot-w, -24px) + 24px) var(--bar-h) no-repeat;
 }
 
 .stage.is-live {
@@ -547,7 +567,8 @@ svg {
   padding-bottom: 96px;
 }
 
-/* small screens: a clear view of the model before the story runs over it */
+/* small screens: a clear view of the model at the top of the intro, which the stage moves up with the page and on
+   into the top bar */
 .scene-window {
   grid-area: window;
   height: calc(var(--bar-h) + var(--frame-h));
@@ -1450,11 +1471,18 @@ a.footer-apply:hover ~ .footer-key kbd,
     margin-left: 20px;
   }
 
+  .bar-slot {
+    display: none;
+  }
+
   /* the stage is beside (and in the intro behind) the story; it takes the drag wherever the story leaves it bare */
   .stage {
+    z-index: 0;
     pointer-events: auto;
     opacity: 1;
     touch-action: pan-y;
+    -webkit-mask: none;
+    mask: none;
   }
 
   .stage.is-live {

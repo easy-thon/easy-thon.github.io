@@ -43,6 +43,8 @@
       </svg>
       EasyThon
     </a>
+    <!-- small screens: past the intro the 3D model sits here, between the name and the menu (see .stage) -->
+    <span class="bar-slot" data-stage-slot aria-hidden="true"></span>
     <nav class="nav" aria-label="바로가기">
       <a href="#schedule">일정</a>
       <a href="#prizes">상금</a>
@@ -57,8 +59,9 @@
   <!-- 3D stage (assets/js/stage/): one small keyboard whose keys re-form for every scene of the story, as each
        scene asks with data-scene. The canvas is fixed to the viewport and the model is fitted to one of the frames
        below, as each scene asks with data-frame: centre stage in the intro, beside the story after it. On small
-       screens both frames are a band at the top and the model is the page's backdrop. Nothing stands in for it
-       while it loads: the plate rises and the keys drop in when it is ready. -->
+       screens it is never behind the text: it fills the clear window at the top of the intro, and past the intro it
+       sits small in the top bar (.bar-slot). Nothing stands in for it while it loads: the plate rises and the keys
+       drop in when it is ready. -->
   <div id="stage" class="stage" aria-hidden="true">
     <div class="stage-frame" data-frame="center"></div>
     <div class="stage-frame" data-frame="side"></div>
@@ -82,7 +85,7 @@
   </div>
 
   <main class="story">
-    <!-- Intro: the object, the name, one line. On small screens it opens with a clear view of the 3D backdrop -->
+    <!-- Intro: the object, the name, one line. On small screens it opens with a clear view of the 3D model -->
     <section id="intro" class="scene hero" data-scene="keyboard" data-frame="center" aria-labelledby="intro-title">
       <div class="scene-window" data-window aria-hidden="true"></div>
       <h1 id="intro-title" class="wordmark">
