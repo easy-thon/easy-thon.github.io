@@ -387,7 +387,7 @@ svg {
 
 /* ---------- Stage ---------- */
 /* Fixed to the viewport once the 3D is up (until then, or without WebGL, the flat mark scrolls away with the
-   intro). On small screens it sits behind the story and scene.js sets --show: in full above the intro, a
+   intro). On small screens it sits behind the story and the stage sets --show: in full above the intro, a
    backdrop behind the text, and up again while it changes shape between scenes. */
 .stage {
   position: absolute;
@@ -420,7 +420,7 @@ svg {
   opacity: 1;
 }
 
-/* the boxes the model is fitted to (scene.js measures them); what they hold sits on the model's centre */
+/* the boxes the model is fitted to (the stage measures them); what they hold sits on the model's centre */
 .stage-frame {
   position: absolute;
   left: 0;
@@ -436,8 +436,8 @@ svg {
   grid-area: 1 / 1;
 }
 
-/* Flat stand-in for the 3D bars: shown until WebGL is up, and kept if it never is. It steps aside quickly,
-   because the 3D bars build themselves up from nothing in its place */
+/* Flat stand-in for the 3D board: shown until WebGL is up, and kept if it never is. It steps aside quickly,
+   because the plate rises and the keys drop in from above in its place */
 .stage-mark {
   width: auto;
   height: 50%;
@@ -448,50 +448,54 @@ svg {
   opacity: 0;
 }
 
-/* --u is the size of one model unit on screen, so the labels scale with the model.
-   Behind the story they would only be text under text, so they show beside it only. */
-.stage-clock {
+/* Labels on the stage, faded in by the stage with --note and --tags. Behind the story they would only be text
+   under text, so they show beside it only. */
+.stage-note,
+.stage-tag {
   display: none;
-  position: relative;
+  position: absolute;
   z-index: 2;
-  text-align: center;
-  opacity: var(--clock, 0);
+  margin: 0;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
-.stage-clock-time {
+/* what the formation on stage shows (the session in focus, for the chart), in the clear corner above it */
+.stage-note {
+  top: calc(var(--bar-h) + 9vh);
+  right: var(--margin);
+  text-align: right;
+  opacity: var(--note, 0);
+}
+
+.stage-note-time {
   display: block;
   font-family: var(--display);
-  font-size: calc(var(--u, 120px) * 0.34);
+  font-size: clamp(36px, 3.4vw, 52px);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   letter-spacing: -0.05em;
 }
 
-.stage-clock-what {
+.stage-note-what {
   display: block;
-  margin-top: 0.6em;
-  font-size: max(12px, calc(var(--u, 120px) * 0.09));
+  margin-top: 10px;
+  font-size: 14px;
   font-weight: 700;
-  white-space: nowrap;
   color: var(--ink-2);
 }
 
-/* rides on top of a podium column; scene.js places it and fades it with --podium */
+/* the amount, over its stack of chips; the stage moves it there */
 .stage-tag {
-  display: none;
-  position: absolute;
   top: 0;
   left: 0;
-  z-index: 2;
   font-family: var(--display);
-  font-size: max(12px, calc(var(--u, 120px) * 0.15));
+  font-size: 22px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.04em;
-  white-space: nowrap;
-  opacity: var(--podium, 0);
-  pointer-events: none;
+  opacity: var(--tags, 0);
   will-change: transform;
 }
 
@@ -1380,11 +1384,18 @@ a.footer-apply:hover .arrow {
     cursor: grabbing;
   }
 
+  /* over the big key at the end, which follows the apply link */
+  .stage.is-live.is-pointing {
+    cursor: pointer;
+  }
+
+  /* the intro's object stands clear of the name across the foot (1/6.85 of the line, see .wordmark) and the line
+     above it */
   .stage-frame[data-frame='center'] {
     top: calc(var(--bar-h) + 2vh);
-    bottom: 8vh;
-    left: 25%;
-    right: 25%;
+    bottom: calc((100vw - 2 * var(--margin)) * 0.143 + 88px);
+    left: 12%;
+    right: 12%;
     height: auto;
   }
 
@@ -1395,11 +1406,12 @@ a.footer-apply:hover .arrow {
     height: auto;
   }
 
-  .stage-clock,
+  .stage-note,
   .stage-tag {
     display: block;
   }
 
+  .story,
   .story .scene {
     pointer-events: none;
   }

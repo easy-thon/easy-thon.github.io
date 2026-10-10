@@ -1,10 +1,10 @@
 // EasyThon 2026, page behaviour: smooth scrolling, which scene is on screen, the schedule stepper, live dates,
-// the apply dock, reveals, and the link between the lists and the 3D stage (assets/js/scene.js).
+// the apply dock, reveals, and the link between the lists and the 3D stage (assets/js/stage/).
 //
-// The two files only talk through events on document:
-//   stage:focus  { group, index }   a list row is in focus         (this file -> scene.js)
-//   stage:hover  { group, index }   a 3D bar is under the pointer  (scene.js -> this file)
-// group is 'clock' (schedule rows) or 'podium' (prize rows); index null means none.
+// The two only talk through events on document:
+//   stage:focus  { group, index }   a list row is in focus         (this file -> the stage)
+//   stage:hover  { group, index }   a 3D key is under the pointer  (the stage -> this file)
+// group is 'day' (schedule rows) or 'prize' (prize rows); index null means none.
 (() => {
   const root = document.documentElement;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,8 +30,8 @@
   const pin = schedule && schedule.querySelector('.scene-pin');
   const timeline = document.getElementById('timeline');
   const rows = [...document.querySelectorAll('#timeline .tl-row')];
-  const clockTime = document.querySelector('[data-clock-time]');
-  const clockWhat = document.querySelector('[data-clock-what]');
+  const noteTime = document.querySelector('[data-note-time]');
+  const noteWhat = document.querySelector('[data-note-what]');
   const startsAt = rows.map(row => {
     const [hours, minutes] = row.dataset.time.split(':').map(Number);
     return hours * 60 + minutes;
@@ -51,7 +51,7 @@
 
   let scrollStep = 0;     // where the scroll position is in the day
   let rowStep = null;     // a row under the pointer
-  let stageStep = null;   // a dial segment under the pointer, reported by scene.js
+  let stageStep = null;   // a session key under the pointer, reported by the stage
   let lit = -1;
   let led = -1;
   // the ink block behind the lit row slides to it
@@ -62,7 +62,7 @@
     timeline.style.setProperty('--h', `${row.offsetHeight}px`);
   }
   function showStep() {
-    const lead = rowStep ?? scrollStep;   // the dial turns to this one
+    const lead = rowStep ?? scrollStep;   // the chart on the stage moves to this one
     const step = stageStep ?? lead;       // this one is lit
     if (step !== lit && rows[step]) {
       lit = step;
@@ -71,13 +71,13 @@
         else row.removeAttribute('aria-current');
       });
       placeMarker();
-      if (clockTime) clockTime.textContent = rows[step].dataset.time;
-      if (clockWhat) clockWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
+      if (noteTime) noteTime.textContent = rows[step].dataset.time;
+      if (noteWhat) noteWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
     }
     if (lead !== led) {
       led = lead;
-      if (stage) stage.dataset.step = lead;   // scene.js starts from here if it loads later
-      focusStage('clock', lead);
+      if (stage) stage.dataset.step = lead;   // the stage starts from here if it loads later
+      focusStage('day', lead);
     }
   }
   rows.forEach((row, i) => {
@@ -100,8 +100,8 @@
     document.querySelectorAll('[data-prize-sum]').forEach(el => { el.textContent = prizeTotal; });
   }
   prizeRows.forEach((row, i) => {
-    row.addEventListener('pointerenter', () => focusStage('podium', i));
-    row.addEventListener('pointerleave', () => focusStage('podium', null));
+    row.addEventListener('pointerenter', () => focusStage('prize', i));
+    row.addEventListener('pointerleave', () => focusStage('prize', null));
   });
 
   // the total counts up the first time its scene comes up
@@ -121,10 +121,10 @@
 
   document.addEventListener('stage:hover', e => {
     const { group, index } = e.detail;
-    if (group === 'clock') {
+    if (group === 'day') {
       stageStep = index;
       showStep();
-    } else if (group === 'podium') {
+    } else if (group === 'prize') {
       prizeRows.forEach((row, i) => row.classList.toggle('is-hot', i === index));
     }
   });
