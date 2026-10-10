@@ -72,6 +72,12 @@ html {
   background: var(--paper);
   scroll-padding-top: var(--bar-h);
   scrollbar-color: var(--ink) transparent;
+  /* No scroll anchoring. Chrome restores the scroll position on reload relative to an element on screen (its scroll
+     anchor) rather than as a plain number, and restores it while the page is still being laid out, before that
+     element is where it was: with the 3D stage fixed (it is never an anchor), a reload at the very top came back
+     scrolled down, by 236px in a 1536 x 734 window, with the name under the keyboard. Without anchors the position
+     is restored as it was. */
+  overflow-anchor: none;
 }
 
 /* smooth anchors without Lenis; with it, Lenis owns the scrolling */

@@ -477,12 +477,15 @@
       narrow = !wide.matches;
       const end = Math.max(0, document.documentElement.scrollHeight - vh);
       footerTop = footer ? footer.getBoundingClientRect().top + window.scrollY : Infinity;
-      marks = sceneEls.map(el => {
+      marks = sceneEls.map((el, i) => {
         const box = el.getBoundingClientRect();
         const top = box.top + window.scrollY;
-        // beside the story the formation holds while its scene fills the screen; behind it (small screens) while the
-        // scene is read, so it changes as the next heading crosses the middle of the screen
-        let a = narrow ? top - vh * 0.35 : top;
+        // Beside the story the formation holds while its scene fills the screen; behind it (small screens) while the
+        // scene is read, so it changes as the next heading crosses the middle of the screen. The scene after the intro
+        // takes over early beside the story too: its model (the countdown) is up while the scene comes in, two thirds
+        // of the way up the screen, rather than once it has reached the top
+        const afterIntro = i > 0 && sceneEls[i - 1].dataset.frame === 'center';
+        let a = narrow || afterIntro ? top - vh * 0.35 : top;
         let b = top + box.height - vh * (narrow ? 0.75 : 1);
         if (b < a) a = b = (a + b) / 2;
         const shape = el.dataset.scene in formations ? el.dataset.scene : 'keyboard';
@@ -1068,28 +1071,7 @@
       model.quaternion.multiply(turnY).premultiply(turnX);
       fit(fa, a.frame, fits.a);
       fit(fb, b.frame, fits.b);
-      let move = eased;   // how far the model has gone from scene a's place to scene b's
-      if (!narrow && a.frame === 'center' && a !== b) {
-        // Beside the story, the intro's keyboard (the centre frame) belongs to its scene, like the name under it: once
-        // the scene has been held it scrolls away with the page, so the name never runs over it. The next model comes
-        // up with the next scene, from below and a little faster than the page, so that it is still out of sight while
-        // the keyboard leaves at the top: the model changes places out of sight, and nothing crosses the name on the
-        // way (the keys rearrange themselves meanwhile, as everywhere). Behind the story (small screens) the model
-        // stays put as the backdrop.
-        const pageY = window.scrollY;
-        const unit = viewH / stageH;   // world units per CSS pixel where the model stands
-        const frameA = frameOf(a.frame);
-        const frameB = frameOf(b.frame);
-        const halfA = (fa.extent.h * fits.a.s) / unit / 2;   // half of each model's height on screen, in pixels
-        const halfB = (fb.extent.h * fits.b.s) / unit / 2;
-        const gone = a.b + frameA.top + frameA.height / 2 + halfA;   // the scroll at which the keyboard is out of sight
-        const below = stageH - (frameB.top + frameB.height / 2) + halfB;   // how far down b's model is out of sight
-        const rise = clamp(below / Math.max(1, b.a - gone - stageH * 0.12), 1, 4);
-        fits.a.y += Math.max(0, pageY - a.b) * unit;
-        fits.b.y -= Math.max(0, b.a - pageY) * rise * unit;
-        move = pageY < (gone + b.a - below / rise) / 2 ? 0 : 1;
-      }
-      model.position.set(lerp(fits.a.x, fits.b.x, move), lerp(fits.a.y, fits.b.y, move) + sway * Math.sin(time * 0.8) * 0.02, 0);
+      model.position.set(lerp(fits.a.x, fits.b.x, eased), lerp(fits.a.y, fits.b.y, eased) + sway * Math.sin(time * 0.8) * 0.02, 0);
       model.scale.setScalar(lerp(fits.a.s, fits.b.s, eased));
       model.updateMatrixWorld();
 
