@@ -458,6 +458,62 @@ svg {
   color: var(--ink-2);
 }
 
+/* the name typed on the board: the hint gives way to where to meet, for a few seconds */
+.stage-note-party {
+  display: none;
+}
+
+.is-party .stage-note-hint {
+  display: none;
+}
+
+.is-party .stage-note-party {
+  display: block;
+  animation: rise 0.6s var(--ease-out) both;
+}
+
+.stage-note-party .stage-note-time {
+  color: var(--red);
+}
+
+/* The chart's figures: the amount over each bar, and the value of each rule beside it. The stage keeps them over
+   the keys and fades them in with --tags (and steps one back with --tag); like the notes, beside the story only. */
+.stage-tag {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  margin: 0;
+  padding-bottom: 6px;
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  opacity: calc(var(--tags, 0) * var(--tag, 1));
+  pointer-events: none;
+  will-change: transform;
+}
+
+.stage-tag small {
+  margin-left: 0.12em;
+  font-family: var(--sans);
+  font-size: 0.55em;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.stage-tag-rule {
+  padding: 0 8px 0 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink-3);
+}
+
 /* ---------- Story ---------- */
 .story {
   position: relative;
@@ -513,6 +569,15 @@ svg {
   font-weight: 300;
   letter-spacing: -0.05em;
   text-align: right;
+}
+
+/* the name turns red while the board spells it in the air (see .stage-note-party) */
+.wordmark .mask:first-child > span {
+  transition: color 0.5s var(--ease-out);
+}
+
+.is-party .wordmark .mask:first-child > span {
+  color: var(--red);
 }
 
 .hero-line {
@@ -1427,7 +1492,8 @@ a.footer-apply:hover ~ .footer-key kbd,
     height: auto;
   }
 
-  .stage-note {
+  .stage-note,
+  .stage-tag {
     display: block;
   }
 

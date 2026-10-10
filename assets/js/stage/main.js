@@ -1,8 +1,9 @@
 // EasyThon 2026 · the 3D stage
 // One small Korean keyboard is the whole cast. In the intro it sits centre stage and types the name, and plays
-// along when the visitor types; down the page its 39 keys hop into place for each chapter: a matrix counting the days
-// left, the day as a clock, the prizes as keys as big as the money, and at the end a single key the size of a hand
-// that follows the apply link. The page's own lists are the data, so editing the HTML re-forms the 3D.
+// along when the visitor types (typing the name itself sets off a small party); down the page its 39 keys hop into
+// place for each chapter: a sign of keys counting the days left, the day as a clock, the prizes as a bar chart, and
+// at the end a single key the size of a hand that follows the apply link. The page's own lists are the data, so
+// editing the HTML re-forms the 3D.
 //
 //   boot.js      checks for WebGL 2, then loads three.js and the files below
 //   layouts.js   where every key goes in every formation (plain numbers)
@@ -30,6 +31,11 @@
   const damp = (cur, goal, rate, dt) => lerp(cur, goal, 1 - Math.exp(-rate * dt));
   const inOut = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const outQuart = t => 1 - Math.pow(1 - t, 4);
+  const smooth = t => t * t * (3 - 2 * t);
+
+  // whole calendar days in Korea from today to a time, as the D-day badges on the page count them
+  const kstDay = ms => Math.floor((ms + 9 * 3600000) / 86400000);
+  const daysTo = time => (Number.isFinite(time) ? kstDay(time) - kstDay(Date.now()) : 0);
 
   // ----- What the page says -----
   function readPage(keyCount) {
@@ -41,22 +47,25 @@
     const sessions = starts.map((start, i) => ({ start, span: Math.max(15, (starts[i + 1] ?? start + 30) - start) }));
 
     const prizeRows = [...document.querySelectorAll('#prize-list [data-amount]')];
-    // one award per winning team, in the order of the list (no more than there are keys)
+    // one award per winning team, in the order of the list (as many as there are keys besides the chart's board and
+    // its four rules at most)
     const awards = prizeRows.flatMap((el, row) => Array.from({ length: Number(el.dataset.teams) || 1 }, () => ({
       amount: Number(el.dataset.amount) || 0,
       row,
       tone: getComputedStyle(el).getPropertyValue('--tone').trim() || '#dcd9d2',
-    }))).slice(0, keyCount).map((award, index) => ({ ...award, index }));
+    }))).slice(0, keyCount - 5).map((award, index) => ({ ...award, index }));
 
     const startAt = document.querySelector('[data-milestone="start"] time');
     const startTime = startAt ? new Date(startAt.dateTime).getTime() : NaN;
-    return { sessions, awards, prizeRows, startTime };
+    return { sessions, awards, prizeRows, startTime, daysLeft: daysTo(startTime) };
   }
 
   parts.start = function start(THREE, { stage, canvas, pace = 1 / 60 }) {
     const { keycapGeometry, keycapMaterial, keycapDepthMaterial, ATTRIBUTES } = parts.keycap;
     const { createLegends, legendFonts } = parts.legends;
-    const { boardKeys, buildFormations, legendSpecs, pixelOn, BRAND, COLORS, PLATE_H, CAP_PROFILE } = parts.layouts;
+    const {
+      boardKeys, buildFormations, countdownFormation, countdownText, legendSpecs, BRAND, COLORS, PLATE_H, CAP_PROFILE,
+    } = parts.layouts;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const wide = window.matchMedia('(min-width: 1024px)');
@@ -87,7 +96,8 @@
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 60);
     camera.position.z = CAM_Z;
-    const viewH = 2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * CAM_Z;
+    camera.updateMatrixWorld();   // the labels are projected before the first frame is drawn
+    const viewH =2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)) * CAM_Z;
 
     // ----- Light: a window to the upper left, the room in the page's colours, and soft studio panels to reflect -----
     const SUN = new THREE.Vector3(-0.5, 0.86, 0.62).normalize();
@@ -151,14 +161,15 @@
     const color = value => new THREE.Color(value);
     const RED = color(COLORS.red);
     const INK = color(COLORS.mod);
+    const CAP = color(COLORS.cap);
     const STONE = color(COLORS.stone);
     const PLATE = color(COLORS.plate);
 
     const NAMES = Object.keys(formations);
     const box = new THREE.Box3();
     const corner = new THREE.Vector3();
-    NAMES.forEach(name => {
-      const f = formations[name];
+    // a formation as the frames use it: colours and legend cells per key, its turn, and the room it takes on screen
+    function prepare(f, name) {
       f.name = name;
       f.slots = f.slots.map(slot => {
         if (slot.hidden) return null;
@@ -194,7 +205,9 @@
         minY = Math.min(minY, corner.y); maxY = Math.max(maxY, corner.y);
       }
       f.extent = { w: maxX - minX, h: maxY - minY, x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
-    });
+      return f;
+    }
+    NAMES.forEach(name => prepare(formations[name], name));
 
     // keys set off one after another: those leaving the stage first, then from the floor up and from left to right
     const orders = new Map();
@@ -282,6 +295,27 @@
     model.add(ground, contact, mesh);
     scene.add(model);
 
+    // ----- Confetti: little caps that burst out of the name when the visitor types it (see the party, below) -----
+    const BITS = 60;
+    const BIT_H = 0.55;   // a bit is a 1u cap this tall, scaled down
+    const bitGeometry = keycapGeometry(THREE, 0.5);
+    const bitAttr = {};
+    Object.entries(ATTRIBUTES).forEach(([name, size]) => {
+      bitAttr[name] = new THREE.InstancedBufferAttribute(new Float32Array(BITS * size), size);
+      bitGeometry.setAttribute(name, bitAttr[name]);
+    });
+    const bits = new THREE.InstancedMesh(bitGeometry, mesh.material, BITS);
+    bits.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    bits.customDepthMaterial = mesh.customDepthMaterial;
+    bits.castShadow = true;
+    bits.frustumCulled = false;
+    bits.count = 0;   // nothing to draw until the party
+    model.add(bits);
+    const bitState = Array.from({ length: BITS }, () => ({
+      pos: new THREE.Vector3(), vel: new THREE.Vector3(), turn: new THREE.Quaternion(), axis: new THREE.Vector3(),
+      spin: 0, size: 0, age: 0, life: 0,
+    }));
+
     // ----- Per key: where it is, on its springs -----
     const keyState = keys.map(() => ({
       pos: new THREE.Vector3(),
@@ -303,7 +337,7 @@
 
     // ----- Poses: one key in one formation, as it should look right now -----
     const makePose = () => ({
-      pos: new THREE.Vector3(), yaw: 0, roll: 0, w: 1, h: 1, d: 1, scale: 1, inset: 0, dish: 0,
+      pos: new THREE.Vector3(), yaw: 0, roll: 0, tilt: 0, w: 1, h: 1, d: 1, scale: 1, inset: 0, dish: 0,
       tint: new THREE.Color(), cell: -1, legendX: 0, legendZ: 0, legendSize: 1, legendTurn: 0, legendOn: 1,
       rough: 0.62, metal: 0, glow: 0, rigid: false,
     });
@@ -318,15 +352,22 @@
     let hover = { group: null, index: null };          // a list row under the pointer, on the stage
     const heat = { day: page.sessions.map(() => 0), prize: page.prizeRows.map(() => 0) };
     let clockTime = page.sessions.length ? page.sessions[0].start : 540;   // minutes: where the hands point
-    let daysLeft = 0;
-    const refreshDays = () => {
-      daysLeft = Number.isFinite(page.startTime) ? Math.max(0, Math.floor((page.startTime - Date.now()) / 86400000)) : 0;
-    };
-    refreshDays();
-    setInterval(refreshDays, 60000);
+    let hotPrize = 0;                                                       // how hot the hottest prize row is
+    // the sign is set again when the day turns (a page left open overnight)
+    let signText = formations.countdown.text;
+    setInterval(() => {
+      const days = daysTo(page.startTime);
+      if (countdownText(days) === signText) return;
+      formations.countdown = prepare(countdownFormation(keys, days), 'countdown');
+      signText = formations.countdown.text;
+      orders.clear();
+      dirty = true;
+    }, 60000);
 
     function pose(f, k, out) {
       const slot = f.slots[k];
+      out.tilt = 0;
+      out.rigid = false;
       if (!slot) {
         out.pos.set(0, HIDDEN_Y, 0);
         out.yaw = 0; out.w = 0.6; out.h = 0.3; out.d = 0.6; out.scale = 0;
@@ -342,19 +383,16 @@
       out.cell = slot.cell; out.legendX = slot.legendX; out.legendZ = slot.legendZ; out.legendSize = slot.legendSize;
       out.legendTurn = slot.legendTurn;
       out.rough = 0.62;
-      out.rigid = false;
       out.metal = 0;
       out.glow = 0;
       switch (slot.role) {
         case 'pixel': {
-          // the days left, lit; and now and then a ripple runs across the matrix
-          if (pixelOn(daysLeft, slot.col, slot.row)) {
-            out.tint.copy(RED);
-            out.pos.y += 0.2;
-          }
+          // now and then a ripple runs along the sign, and lights it as it goes
           if (!reduceMotion) {
-            const run = (time % 5.5) * 7 - slot.col - slot.row * 0.4;
-            out.pos.y += 0.07 * Math.exp(-run * run * 0.8);
+            const run = (time % 5.5) * 8 - slot.col - slot.row * 0.4;
+            const crest = Math.exp(-run * run * 0.6);
+            out.pos.y += 0.09 * crest;
+            out.glow = 0.07 * crest;
           }
           break;
         }
@@ -384,13 +422,19 @@
           out.rigid = true;
           break;
         }
-        case 'award': {
-          // a prize in focus (its row on the page, or the key under the pointer) is pressed down, and glows a little
+        case 'bar': {
+          // a prize in focus (its row on the page, or the bar under the pointer) glows a little, and the other bars
+          // fade toward the board
           const h = heat.prize[slot.prize] || 0;
-          out.pos.y -= h * PRESS * slot.scale;
-          out.glow = 0.04 * h;
+          out.glow = 0.05 * h;
+          out.tint.lerp(PLATE, 0.6 * clamp(hotPrize - h, 0, 1));
           break;
         }
+        case 'board':
+          // the same anodised metal as the plate it stands on
+          out.rough = 0.46;
+          out.metal = 0.12;
+          break;
         case 'enter':
           out.glow = 0.03;
           break;
@@ -409,6 +453,8 @@
     const placements = {};   // per frame: centre and size in world units, top and height in stage pixels
     const frameOf = name => placements[name] || placements.side || { x: 0, y: 0, w: viewH, h: viewH, top: 0, height: 1 };
     let sized = '';
+    let stageW = 1;          // the stage in CSS pixels
+    let stageH = 1;
 
     function measure() {
       const vh = window.innerHeight;
@@ -443,6 +489,8 @@
       const w = stage.clientWidth;
       const h = stage.clientHeight;
       if (!w || !h) return;
+      stageW = w;
+      stageH = h;
       narrow = !wide.matches;
       dpr = Math.max(0.75, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(maxPixels / (w * h))) * quality);
       const next = `${w}x${h}@${dpr}`;
@@ -531,7 +579,7 @@
       return found;
     }
 
-    // ----- Labels on the stage: a note in the corner for each formation -----
+    // ----- Labels on the stage: a note in the corner for each formation, and the chart's figures -----
     const notes = [...stage.querySelectorAll('.stage-note[data-note]')].map(el => ({ el, name: el.dataset.note, shown: '' }));
     const shown = {};
     const setVar = (name, value) => {
@@ -540,6 +588,34 @@
       shown[name] = text;
       stage.style.setProperty(name, text);
     };
+    // the amount over each bar, and the value of each rule at its left end, kept over the keys as they move
+    const tags = formations.prizes.slots.flatMap((slot, k) => {
+      if (!slot || (slot.role !== 'bar' && slot.role !== 'grid')) return [];
+      const el = document.createElement('span');
+      el.className = slot.role === 'bar' ? 'stage-tag' : 'stage-tag stage-tag-rule';
+      el.setAttribute('aria-hidden', 'true');
+      el.innerHTML = slot.role === 'bar' ? `${slot.amount}<small>만원</small>` : String(slot.level);
+      stage.appendChild(el);
+      return [{ el, k, over: slot.role === 'bar', prize: slot.prize, shown: '' }];
+    });
+    const point = new THREE.Vector3();
+    const offset = new THREE.Vector3();
+    function pin(tag) {
+      const key = keyState[tag.k];
+      if (tag.over) offset.set(0, key.half.y + 0.2, 0);
+      else offset.set(-key.half.x - 0.14, 0, 0);
+      point.copy(key.centre).add(offset.applyQuaternion(key.turn));
+      model.localToWorld(point).project(camera);
+      const x = ((point.x + 1) / 2) * stageW;
+      const y = ((1 - point.y) / 2) * stageH;
+      tag.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) ${tag.over ? 'translate(-50%, -100%)' : 'translate(-100%, -50%)'}`;
+      // beside a prize in focus, the other amounts step back
+      const dim = tag.over ? (1 - 0.65 * clamp(hotPrize - (heat.prize[tag.prize] || 0), 0, 1)).toFixed(2) : '1.00';
+      if (tag.shown !== dim) {
+        tag.shown = dim;
+        tag.el.style.setProperty('--tag', dim);
+      }
+    }
     // small screens: the model shows in full while nothing covers the middle of the frame, dims to a backdrop while the
     // story runs over it, and comes up part way while it changes formation (blend 0..1)
     function veil(blend) {
@@ -573,6 +649,127 @@
       kicks.sort((x, y) => x[0] - y[0]);
     }
 
+    // ----- The party: the visitor types the name on the board (on their keyboard, or key by key with the pointer).
+    // A ripple runs over the board, the eight red keys fly up and spell it in the air, turned to the viewer, while
+    // little caps burst out of it and rain on the board; the corner says where to meet, and the name on the page
+    // turns red. Under reduced motion only the words change and the red keys glow. -----
+    const NAME = BRAND.map(code => code.slice(3)).join('');
+    const brandAt = keys.map(key => BRAND.indexOf(key.code));
+    const PARTY_UP = 2.9;    // s the name stays up
+    const PARTY_END = 4.4;   // s the word in the corner stays
+    const party = { at: -Infinity, t: Infinity, on: false, burstAt: 0, timer: 0 };
+    // where letter j of the name hangs: in a row over the board, square to the viewer however the board is turned
+    const FACING = -formations.keyboard.view[1];
+    const wordAt = (j, out) => out.set((j - 3.5) * 1.5, 2.4, 0.5).applyAxisAngle(UP, FACING);
+    function celebrate(from) {
+      if (party.on) return;
+      const now = performance.now();
+      party.at = now;
+      party.t = 0;
+      party.on = true;
+      document.body.classList.add('is-party');
+      clearTimeout(party.timer);
+      party.timer = setTimeout(() => {
+        document.body.classList.remove('is-party');
+        dirty = true;
+      }, PARTY_END * 1000);
+      if (!reduceMotion) {
+        wave(from);
+        party.burstAt = now + 520;   // as the letters reach the top
+      }
+      dirty = true;
+    }
+    function typeLetter(k) {
+      const code = keys[k] ? keys[k].code : '';
+      if (!/^Key[A-Z]$/.test(code)) return;
+      typed = (typed + code.slice(3)).slice(-NAME.length);
+      if (typed !== NAME) return;
+      typed = '';
+      celebrate(k);
+    }
+    // a letter of the name on its way up, up, or on its way back down
+    const word = new THREE.Vector3();
+    function lift(j, out) {
+      if (reduceMotion) {
+        out.glow = Math.max(out.glow, 0.2);
+        return;
+      }
+      const t = party.t - 0.08 - j * 0.07;
+      const up = smooth(clamp(t / 0.28, 0, 1)) * smooth(clamp((PARTY_UP - j * 0.04 - t) / 0.32, 0, 1))
+        * clamp(weight.keyboard * 2 - 1, 0, 1);
+      if (up <= 0) return;
+      wordAt(j, word).y += Math.sin(party.t * 3.4 - j * 0.75) * 0.12;
+      out.pos.lerp(word, up);
+      out.yaw = lerp(out.yaw, FACING, up);
+      out.tilt = lerp(out.tilt, 0.62, up);
+      out.scale *= 1 + 0.3 * up;
+      out.glow = Math.max(out.glow, 0.1 * up);
+    }
+
+    // the confetti, shot out of the name as it reaches the top: each bit hops and tumbles, lands on the plate (or off
+    // its edge, on the page), bounces, settles flat and fades
+    const BIT_FALL = 22;
+    const BIT_TINTS = [RED, RED, RED, INK, CAP, STONE];
+    const nudge = new THREE.Quaternion();
+    const flat = new THREE.Quaternion();
+    const bitAngles = new THREE.Euler();
+    const scatter = new THREE.Vector3();
+    function burst() {
+      bitState.forEach((bit, i) => {
+        scatter.set((Math.random() - 0.5) * 0.8, Math.random() * 0.3, (Math.random() - 0.5) * 0.5);
+        wordAt(i % BRAND.length, bit.pos).add(scatter);
+        bit.vel.set((Math.random() - 0.5) * 6, 3 + Math.random() * 5, 0.6 + Math.random() * 3.2);
+        bit.axis.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+        bit.turn.setFromAxisAngle(bit.axis, Math.random() * Math.PI * 2);
+        bit.spin = 7 + Math.random() * 9;
+        bit.size = 0.3 + Math.random() * 0.16;
+        bit.age = 0;
+        bit.life = 2.2 + Math.random() * 0.8;
+        const tint = BIT_TINTS[i % BIT_TINTS.length];
+        bitAttr.aSize.setXYZW(i, 0.9, BIT_H, 0.9, 0.07);
+        bitAttr.aProfile.setXYZW(i, CAP_PROFILE[0], CAP_PROFILE[1], 0, 0);
+        bitAttr.aColor.setXYZ(i, tint.r, tint.g, tint.b);
+        bitAttr.aLegend.setXYZW(i, -1, 0, 0, 1);
+        bitAttr.aLook.setXYZW(i, 0.55, 0, 0, tint === RED ? 0.05 : 0);
+      });
+      Object.values(bitAttr).forEach(attribute => { attribute.needsUpdate = true; });
+      bits.count = BITS;
+    }
+    function updateBits(dt) {
+      if (!bits.count) return;
+      const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+      const h = dt / steps;
+      let alive = 0;
+      bitState.forEach((bit, i) => {
+        let s = 0;
+        for (let n = 0; n < steps && bit.age < bit.life; n++) {
+          bit.age += h;
+          const above = bit.pos.y >= 0;
+          bit.vel.y -= BIT_FALL * h;
+          bit.pos.addScaledVector(bit.vel, h);
+          const onPlate = above && Math.abs(bit.pos.x) < plate.w / 2 && Math.abs(bit.pos.z) < plate.d / 2;
+          const floor = (onPlate ? 0 : -PLATE_H) + (BIT_H / 2) * bit.size;
+          if (bit.pos.y <= floor) {
+            bit.pos.y = floor;
+            bit.vel.y = bit.vel.y < -1.2 ? -bit.vel.y * 0.36 : 0;
+            bit.vel.x *= 0.72;
+            bit.vel.z *= 0.72;
+            bit.spin *= 0.5;
+            bitAngles.setFromQuaternion(bit.turn, 'YXZ');
+            bit.turn.slerp(flat.setFromAxisAngle(UP, bitAngles.y), 1 - Math.exp(-14 * h));
+          }
+          bit.turn.premultiply(nudge.setFromAxisAngle(bit.axis, bit.spin * h));
+        }
+        if (bit.age < bit.life) {
+          alive++;
+          s = bit.size * clamp(bit.age / 0.06, 0, 1) * clamp((bit.life - bit.age) / 0.4, 0, 1);
+        }
+        bits.setMatrixAt(i, matrix.compose(bit.pos, bit.turn, scaleV.setScalar(Math.max(s, 1e-4))));
+      });
+      bits.instanceMatrix.needsUpdate = true;
+      if (!alive) bits.count = 0;
+    }
+
     // ----- Animation -----
     const weight = Object.fromEntries(NAMES.map(name => [name, 0]));
     // the big key at the end is a way in: a click on it follows the page's own apply link, while there is one
@@ -600,7 +797,7 @@
 
     const target = new THREE.Vector3();
     const tint = new THREE.Color();
-    const euler = new THREE.Euler();
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');   // a key turns on its yaw, then tips up (tilt) and over (roll)
     const spin = new THREE.Quaternion();
     const turnX = new THREE.Quaternion();
     const turnY = new THREE.Quaternion();
@@ -655,6 +852,7 @@
       out.pos.y += arc * Math.min(2.4, 0.45 + reach * 0.16) * (poseA.scale > 0 && poseB.scale > 0 ? 1 : 0.35);
       out.yaw = lerp(poseA.yaw, poseB.yaw, t);
       out.roll = arc * tumble[k];
+      out.tilt = lerp(poseA.tilt, poseB.tilt, t);
       out.w = lerp(poseA.w, poseB.w, t);
       out.h = lerp(poseA.h, poseB.h, t);
       out.d = lerp(poseA.d, poseB.d, t);
@@ -679,6 +877,7 @@
         out.legendZ = lerp(poseA.legendZ, poseB.legendZ, t);
         out.legendSize = lerp(poseA.legendSize, poseB.legendSize, t);
       }
+      if (party.on && brandAt[k] >= 0) lift(brandAt[k], out);
       return out;
     }
     const goal = makePose();
@@ -701,6 +900,7 @@
       const litRow = hover.group === 'prize' ? hover.index : hotRow;
       heat.day.forEach((v, i) => { heat.day[i] = reduceMotion ? +(i === litStep) : damp(v, +(i === litStep), 10, dt); });
       heat.prize.forEach((v, i) => { heat.prize[i] = reduceMotion ? +(i === litRow) : damp(v, +(i === litRow), 10, dt); });
+      hotPrize = Math.max(0, ...heat.prize);
       // the hands sweep to the session in focus: the minute hand round once for every hour on the way, at most four
       // turns a second
       const lit = page.sessions[clamp(litStep, 0, page.sessions.length - 1)];
@@ -727,6 +927,12 @@
         const [, k, speed] = kicks.shift();
         keyState[k].hopVel += speed;
       }
+      party.t = (now - party.at) / 1000;
+      party.on = party.t < PARTY_END;
+      if (party.burstAt && now >= party.burstAt) {
+        party.burstAt = 0;
+        burst();
+      }
 
       // ----- keys -----
       const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
@@ -746,7 +952,7 @@
             key.pos.addScaledVector(key.vel, h);
           }
         }
-        spin.setFromEuler(euler.set(0, goal.yaw, goal.roll));
+        spin.setFromEuler(euler.set(goal.tilt, goal.yaw, goal.roll));
         if (reduceMotion || goal.rigid) key.turn.copy(spin);
         else key.turn.slerp(spin, 1 - Math.exp(-16 * dt));
 
@@ -809,6 +1015,7 @@
       ground.scale.set(plate.w * 3, plate.d * 3, 1);
       contact.material.uniforms.uSize.value.set(plate.w * lerp(0.9, 1, rise), plate.d * lerp(0.9, 1, rise));
       contact.material.uniforms.uStrength.value = 0.3 * rise;
+      updateBits(dt);
 
       // ----- the model: turned to show the formation, plus the hand, the lean and a slow sway -----
       if (!dragging && !reduceMotion) {
@@ -868,6 +1075,10 @@
         note.shown = text;
         note.el.style.setProperty('--note', text);
       });
+      // the chart's figures come up with the chart, beside the story only
+      const tagsOn = narrow ? 0 : clamp((weight.prizes - 0.75) / 0.25, 0, 1) * clear;
+      setVar('--tags', tagsOn);
+      if (tagsOn > 0) tags.forEach(pin);
     }
 
     // drop the resolution if the device cannot keep up
@@ -925,7 +1136,7 @@
         aim(k, goal);
         keyState[k].pos.copy(goal.pos);
         keyState[k].vel.set(0, 0, 0);
-        keyState[k].turn.setFromEuler(euler.set(0, goal.yaw, goal.roll));
+        keyState[k].turn.setFromEuler(euler.set(goal.tilt, goal.yaw, goal.roll));
       }
       plate.w = formations[a.shape].plate.w;
       plate.d = formations[a.shape].plate.d;
@@ -959,7 +1170,7 @@
       hovered = keyAt(pointer.x, pointer.y);
       const slot = hovered >= 0 ? leading().slots[hovered] : null;
       if (slot && slot.role === 'tick' && slot.session >= 0 && weight.day > 0.85) setHover('day', slot.session);
-      else if (slot && slot.role === 'award' && weight.prizes > 0.85) setHover('prize', slot.prize);
+      else if (slot && slot.role === 'bar' && weight.prizes > 0.85) setHover('prize', slot.prize);
       else setHover(null, null);
       stage.classList.toggle('is-pointing', onEnter(hovered) && !!applyLink());
     }
@@ -996,12 +1207,7 @@
       held.add(k);
       humanAt = performance.now();
       dirty = true;
-      if (e.repeat || !/^Key[A-Z]$/.test(e.code)) return;
-      typed = (typed + e.code.slice(3)).slice(-BRAND.length);
-      if (typed === BRAND.map(code => code.slice(3)).join('')) {
-        typed = '';
-        wave(k);
-      }
+      if (!e.repeat) typeLetter(k);
     });
     window.addEventListener('keyup', e => {
       const k = keyIndex.get(e.code);
@@ -1055,6 +1261,8 @@
       if (downAt !== e.pointerId) return;
       downAt = -1;
       if (pressing >= 0) tap(pressing, 90);
+      // a click on a letter types it, so the name can be spelled with the pointer too
+      if (!dragging && pressing >= 0 && e.type === 'pointerup' && weight.keyboard > 0.5) typeLetter(pressing);
       if (!dragging && onEnter(pressing) && e.type === 'pointerup') {
         const link = applyLink();
         if (link) link.click();

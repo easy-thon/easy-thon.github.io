@@ -97,16 +97,6 @@
           ctx.font = `600 ${Math.round(cell * 0.44)}px ${LATIN}`;
           ctx.fillText(spec.figure, x0 + cell / 2, y0 + cell / 2 + cell * 0.03);
         }
-        if (spec.amount) {
-          // a prize: the amount large, and its unit under it
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'alphabetic';
-          ctx.font = `600 ${Math.round(cell * 0.4)}px ${LATIN}`;
-          ctx.fillText(spec.amount, x0 + cell / 2, y0 + cell * 0.6);
-          ctx.textBaseline = 'top';
-          ctx.font = `700 ${Math.round(cell * 0.19)}px ${HANGUL}`;
-          ctx.fillText(spec.unit, x0 + cell / 2, y0 + cell * 0.66);
-        }
         ctx.restore();
       });
     }

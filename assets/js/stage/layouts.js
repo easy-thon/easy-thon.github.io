@@ -10,7 +10,7 @@
   const PLATE_H = 0.5;             // plate thickness
   const MARGIN = 0.42;             // plate border around what stands on it
   const CAP_PROFILE = [0.11, 0.035];   // a key cap: how far the top is drawn in (taper), and its dish
-  const FLAT_PROFILE = [0.015, 0];     // straight walls and a flat top: the clock's hands
+  const FLAT_PROFILE = [0.015, 0];     // straight walls and a flat top: the clock's hands, the chart's bars
 
   const COLORS = {
     cap: '#f4f2ed',     // porcelain caps
@@ -42,13 +42,17 @@
     '111101101101111', '010110010010111', '111001111100111', '111001111001111', '101101111001001',
     '111100111001111', '111100111101111', '111001001001001', '111101111101111', '111101111001111',
   ];
-  // is the pixel at column c (0..6), row r (0..4) of a two-digit display lit for this number
-  function pixelOn(value, c, r) {
-    if (c === 3) return false;
-    const n = Math.max(0, Math.min(99, Math.floor(value)));
-    const digit = c < 3 ? Math.floor(n / 10) : n % 10;
-    return FIGURES[digit][r * 3 + (c < 3 ? c : c - 4)] === '1';
-  }
+  // and the letters the countdown needs; the dash is two pixels wide
+  const LETTERS = {
+    D: ['110', '101', '101', '101', '110'],
+    A: ['010', '101', '111', '101', '101'],
+    Y: ['101', '101', '010', '010', '010'],
+    '-': ['00', '00', '11', '00', '00'],
+  };
+  const glyph = ch => (/\d/.test(ch) ? FIGURES[ch].match(/.../g) : LETTERS[ch]);
+
+  // what the countdown says, days being whole calendar days to the start: D-35, and D-DAY on the day (and after it)
+  const countdownText = days => (days > 0 ? `D-${Math.min(99, Math.floor(days))}` : 'D-DAY');
 
   const capY = (h = CAP_H) => SEAT + h / 2;
 
@@ -91,9 +95,8 @@
       else if (key.sub) specs.set(key.code, { main: key.main, sub: key.sub });
       else specs.set(key.code, key.kind === 'mod' ? { word: key.main } : { main: key.main });
     });
-    // the clock face, and the amount on each prize key
+    // the clock face
     for (let hour = 1; hour <= 12; hour++) specs.set(`clock:${hour}`, { figure: String(hour) });
-    page.awards.forEach(award => specs.set(`amount:${award.amount}`, { amount: String(award.amount), unit: '만원' }));
     return specs;
   }
 
@@ -112,13 +115,26 @@
     return { slots, plate: { w: width + MARGIN * 2, d: ROWS.length + MARGIN * 2 }, view: [0.9, -0.3] };
   }
 
-  // the days left to the start, as lit keys on a 7 x 5 matrix
-  function countdown() {
-    const targets = [];
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 7; c++) targets.push(cap({ x: c - 3, z: r - 2, role: 'pixel', col: c, row: r }));
-    }
-    return { targets, plate: { w: 7 + MARGIN * 2, d: 5 + MARGIN * 2 }, view: [0.86, -0.5] };
+  // The days left as a sign set in keys: a key for every lit pixel of D-35 and nothing else on the plate, the letters
+  // three keys wide and five deep, "D-" in ink and the number in red. Seen nearly from above, so it reads like type.
+  // At most 39 pixels (D-DAY takes every key), so the whole board can spell it.
+  function countdown(days) {
+    const text = countdownText(days);
+    const lit = [];
+    let col = 0;
+    [...text].forEach((ch, i) => {
+      const rows = glyph(ch);
+      rows.forEach((row, r) => [...row].forEach((on, c) => {
+        if (on === '1') lit.push({ col: col + c, row: r, ink: i < 2 });
+      }));
+      col += rows[0].length + 1;
+    });
+    const width = col - 1;
+    const targets = lit.map(pixel => cap({
+      x: pixel.col - (width - 1) / 2, z: pixel.row - 2, color: pixel.ink ? COLORS.mod : COLORS.red,
+      role: 'pixel', col: pixel.col, row: pixel.row,
+    }));
+    return { targets, text, plate: { w: width + MARGIN * 2, d: 5 + MARGIN * 2 }, view: [1.1, -0.07] };
   }
 
   // The day on a clock face. A ring of keys, one per half hour of the dial (the hours larger, with their numerals),
@@ -156,41 +172,46 @@
     return { targets, plate: { w: side, d: side }, view: [0.98, -0.3] };
   }
 
-  // The prizes as a pad of keys: one per winning team, as big as its prize (the top of a key grows in area with the
-  // amount), printed with the amount and in the colour of its row on the page, two to a row. Nothing is stacked:
-  // the size of a key is the money.
-  function keyset(page) {
-    const targets = [];
+  // a round step for the rules of a chart: 1, 2, 2.5 or 5 times a power of ten, no smaller than this
+  function roundStep(least) {
+    const power = 10 ** Math.floor(Math.log10(Math.max(least, 1e-6)));
+    return [1, 2, 2.5, 5, 10].map(m => m * power).find(step => step >= least - 1e-9);
+  }
+
+  // The prizes as a bar chart: a bar for every winning team, as tall as its prize and in the colour of its row on the
+  // page, standing on the plate in front of a board ruled at round amounts. main.js writes the amounts over the bars
+  // and the values of the rules beside them.
+  function chart(page) {
+    const TALL = 4.2;          // the top prize's bar
+    const PITCH = 1.45;        // bar to bar
+    const BAR_Z = 0.32;
+    const BOARD_Z = -0.78;
+    const BOARD_D = 0.14;
     const most = Math.max(1, ...page.awards.map(award => award.amount));
-    const base = [1.4 - GAP, 1.2 - GAP];   // a prize key before it is scaled up
-    const biggest = 2;
-    const gap = 0.42;
-    const rows = [];
-    page.awards.forEach((award, i) => {
-      if (i % 2 === 0) rows.push([]);
-      rows[rows.length - 1].push({ award, scale: biggest * Math.sqrt(Math.max(award.amount, 1) / most) });
-    });
-    const depths = rows.map(row => Math.max(...row.map(key => base[1] * key.scale)));
-    const depth = depths.reduce((sum, d) => sum + d, 0) + gap * (rows.length - 1);
-    let width = 0;
-    let z = -depth / 2;
-    rows.forEach((row, r) => {
-      const span = row.reduce((sum, key) => sum + base[0] * key.scale, 0) + gap * (row.length - 1);
-      width = Math.max(width, span);
-      let x = -span / 2;
-      row.forEach(({ award, scale }) => {
-        targets.push(cap({
-          x: x + (base[0] * scale) / 2, z: z + depths[r] / 2, y: capY() * scale, w: base[0], d: base[1], scale,
-          color: award.tone, legend: { id: `amount:${award.amount}`, at: [0, 0], size: 0.9 },
-          role: 'award', index: award.index, prize: award.row,
-        }));
-        x += base[0] * scale + gap;
+    const n = page.awards.length;
+    const targets = page.awards.map((award, i) => {
+      const h = Math.max(0.1, (TALL * award.amount) / most);
+      return cap({
+        x: (i - (n - 1) / 2) * PITCH, y: h / 2 + 0.005, z: BAR_Z, w: 1, h, d: 1, profile: FLAT_PROFILE,
+        color: award.tone, role: 'bar', index: award.index, prize: award.row, amount: award.amount,
       });
-      z += depths[r] + gap;
     });
-    // the pad's border a little wider than the board's, as for the big key at the end
-    const border = MARGIN * 2.2;
-    return { targets, plate: { w: width + border, d: depth + border }, view: [0.72, -0.42] };
+    const span = Math.max(1, n) * PITCH + 0.45;
+    const boardH = TALL + 0.55;
+    targets.push(cap({
+      y: boardH / 2, z: BOARD_Z, w: span, h: boardH, d: BOARD_D, profile: FLAT_PROFILE, color: COLORS.plate,
+      role: 'board',
+    }));
+    // a rule at every round step up to the top prize (every 25 for 100), just proud of the board
+    const step = roundStep(most / 4);
+    for (let level = step; level <= most + 1e-6; level += step) {
+      targets.push(cap({
+        y: (TALL * level) / most, z: BOARD_Z + BOARD_D / 2 + 0.035, w: span - 0.3, h: 0.045, d: 0.06, profile: [0, 0],
+        color: COLORS.cap, role: 'grid', level: Math.round(level * 100) / 100,
+      }));
+    }
+    const reach = Math.max(-BOARD_Z + BOARD_D / 2, BAR_Z + 0.5);
+    return { targets, plate: { w: span + MARGIN * 2, d: reach * 2 + MARGIN * 2 }, view: [0.36, -0.42] };
   }
 
   // a single key, the size of a hand: the way in
@@ -231,21 +252,26 @@
   // where a key stood last: in this formation, or the one before if it was out of sight there
   const standing = (slots, before) => slots.map((slot, k) => (slot.hidden ? before[k] : slot));
 
+  // The countdown, handed out to the keys of the board. The widest keys sit it out while there are keys to spare:
+  // a space bar makes a poor pixel. main.js asks for it again when the day turns.
+  function countdownFormation(keys, days) {
+    const board = keyboard(keys);
+    const sign = countdown(days);
+    const widest = keys.map((key, k) => [key.w, k]).sort((a, b) => b[0] - a[0]);
+    const benched = new Set(widest.slice(0, Math.max(0, keys.length - sign.targets.length)).map(([, k]) => k));
+    return { slots: assign(keys, board.slots, sign.targets, benched), plate: sign.plate, view: sign.view, text: sign.text };
+  }
+
   function buildFormations(page) {
     const keys = boardKeys();
     const board = keyboard(keys);
+    const sign = countdownFormation(keys, page.daysLeft);
 
-    // the widest keys sit out the matrix: a space bar makes a poor pixel
-    const matrix = countdown();
-    const widest = keys.map((key, k) => [key.w, k]).sort((a, b) => b[0] - a[0]);
-    const benched = new Set(widest.slice(0, Math.max(0, keys.length - matrix.targets.length)).map(([, k]) => k));
-    const matrixSlots = assign(keys, board.slots, matrix.targets, benched);
+    const dial = clock(page);
+    const dialSlots = assign(keys, standing(sign.slots, board.slots), dial.targets);
 
-    const chart = clock(page);
-    const chartSlots = assign(keys, standing(matrixSlots, board.slots), chart.targets);
-
-    const prizePad = keyset(page);
-    const prizeSlots = assign(keys, standing(chartSlots, standing(matrixSlots, board.slots)), prizePad.targets);
+    const bars = chart(page);
+    const barSlots = assign(keys, standing(dialSlots, standing(sign.slots, board.slots)), bars.targets);
 
     const pad = enter();
     const padSlots = keys.map(key => (key.code === 'Enter' ? pad.target : { hidden: true }));
@@ -254,9 +280,9 @@
       keys,
       formations: {
         keyboard: { slots: board.slots, plate: board.plate, view: board.view },
-        countdown: { slots: matrixSlots, plate: matrix.plate, view: matrix.view },
-        day: { slots: chartSlots, plate: chart.plate, view: chart.view },
-        prizes: { slots: prizeSlots, plate: prizePad.plate, view: prizePad.view },
+        countdown: sign,
+        day: { slots: dialSlots, plate: dial.plate, view: dial.view },
+        prizes: { slots: barSlots, plate: bars.plate, view: bars.view },
         enter: { slots: padSlots, plate: pad.plate, view: pad.view },
       },
     };
@@ -272,9 +298,10 @@
     FLAT_PROFILE,
     COLORS,
     BRAND,
-    pixelOn,
     boardKeys,
     legendSpecs,
+    countdownText,
+    countdownFormation,
     buildFormations,
   };
 })(window.EasyThonStage = window.EasyThonStage || {});

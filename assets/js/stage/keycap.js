@@ -1,6 +1,6 @@
 // EasyThon 2026 · keycaps
 // One cap shape, drawn for every key at once (an InstancedMesh). The vertex shader builds each instance from its own
-// size, corner radius, taper and dish, so the same mesh is a 1u letter, a 7u space bar, a flat chip in a prize stack
+// size, corner radius, taper and dish, so the same mesh is a 1u letter, a 7u space bar, a bar of the prize chart
 // and the plate under them all. The depth pass that casts the shadows runs the same shape code.
 // A plain script, like the rest of the stage, so the page also works opened straight from disk; three.js is handed in.
 (parts => {

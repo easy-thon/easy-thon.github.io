@@ -63,14 +63,21 @@
     <div class="stage-frame" data-frame="center"></div>
     <div class="stage-frame" data-frame="side"></div>
     <canvas id="scene"></canvas>
-    <!-- what each formation shows, in the clear corner above it (wide screens) -->
-    <p class="stage-note" data-note="keyboard"><span class="stage-note-what">키보드로 EASYTHON을 입력해 보세요</span></p>
-    <p class="stage-note" data-note="countdown"><span class="stage-note-what">해커톤까지 남은 날</span></p>
+    <!-- what each formation shows, in the clear corner above it (wide screens); typing the name on the board swaps
+         the first for the party's word -->
+    <p class="stage-note" data-note="keyboard">
+      <span class="stage-note-what stage-note-hint">키보드로 EASYTHON을 입력해 보세요</span>
+      <span class="stage-note-party">
+        <span class="stage-note-time">EASYTHON</span>
+        <span class="stage-note-what">11월 14일, 미디어센터 507호에서 만나요</span>
+      </span>
+    </p>
+    <p class="stage-note" data-note="countdown"><span class="stage-note-what">11월 14일 해커톤까지</span></p>
     <p class="stage-note" data-note="day">
       <span class="stage-note-time" data-note-time>09:00</span>
       <span class="stage-note-what" data-note-what>개회식</span>
     </p>
-    <p class="stage-note" data-note="prizes"><span class="stage-note-what">키가 클수록 큰 상금</span></p>
+    <p class="stage-note" data-note="prizes"><span class="stage-note-what">팀별 상금</span></p>
     <p class="stage-note" data-note="enter"><span class="stage-note-what">눌러서 참가 신청</span></p>
   </div>
 
@@ -199,8 +206,8 @@
       </div>
     </section>
 
-    <!-- Prizes: the stage gives each of data-teams a key as big as data-amount (만원), printed with it, in the colour
-         of --tone; effects.js adds them up for the totals -->
+    <!-- Prizes: the stage charts each of data-teams as a bar as tall as data-amount (만원), in the colour of --tone;
+         effects.js adds them up for the totals -->
     <section id="prizes" class="scene" data-scene="prizes" data-frame="side" aria-labelledby="prizes-title">
       <div class="scene-body">
         <header class="chapter-head">
