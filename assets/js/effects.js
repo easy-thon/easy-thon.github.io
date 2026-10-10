@@ -1,5 +1,5 @@
-// EasyThon 2026, page behaviour: which scene is on screen, the schedule stepper, live dates,
-// and the link between the lists and the 3D stage (assets/js/scene.js).
+// EasyThon 2026, page behaviour: smooth scrolling, which scene is on screen, the schedule stepper, live dates,
+// the apply dock, reveals, and the link between the lists and the 3D stage (assets/js/scene.js).
 //
 // The two files only talk through events on document:
 //   stage:focus  { group, index }   a list row is in focus         (this file -> scene.js)
@@ -8,22 +8,26 @@
 (() => {
   const root = document.documentElement;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const wide = window.matchMedia('(min-width: 1024px)');
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-  const stage = document.getElementById('stage');
   const topbar = document.getElementById('topbar');
-  const bar = document.getElementById('scroll-progress');
+  const stage = document.getElementById('stage');
   const scenes = [...document.querySelectorAll('.scene')];
-  const tabs = [...document.querySelectorAll('.tab')];
+  const tabs = [...document.querySelectorAll('.nav a')];
 
   const focusStage = (group, index) => {
     document.dispatchEvent(new CustomEvent('stage:focus', { detail: { group, index } }));
   };
 
+  // ----- Smooth wheel scrolling (Lenis) for mice and trackpads; touch and reduced motion keep the native scroll -----
+  if (window.Lenis && !reduceMotion && window.matchMedia('(pointer: fine)').matches) {
+    window.lenis = new window.Lenis({ autoRaf: true, anchors: true, lerp: 0.12 });
+  }
+
   // ----- Schedule: one row leads at a time -----
   const schedule = document.getElementById('schedule');
   const pin = schedule && schedule.querySelector('.scene-pin');
+  const timeline = document.getElementById('timeline');
   const rows = [...document.querySelectorAll('#timeline .tl-row')];
   const clockTime = document.querySelector('[data-clock-time]');
   const clockWhat = document.querySelector('[data-clock-what]');
@@ -39,14 +43,23 @@
     const minutes = span % 60;
     row.querySelector('.tl-span').textContent = [hours && `${hours}시간`, minutes && `${minutes}분`].filter(Boolean).join(' ');
   });
-  const hoursEl = document.querySelector('[data-hours]');
-  if (hoursEl && rows.length) hoursEl.textContent = `${rows[0].dataset.time} – ${rows[rows.length - 1].dataset.time}`;
+  if (rows.length) {
+    const hours = `${rows[0].dataset.time} – ${rows[rows.length - 1].dataset.time}`;
+    document.querySelectorAll('[data-hours]').forEach(el => { el.textContent = hours; });
+  }
 
   let scrollStep = 0;     // where the scroll position is in the day
   let rowStep = null;     // a row under the pointer
   let stageStep = null;   // a dial segment under the pointer, reported by scene.js
   let lit = -1;
   let led = -1;
+  // the ink block behind the lit row slides to it
+  function placeMarker() {
+    const row = rows[lit];
+    if (!timeline || !row) return;
+    timeline.style.setProperty('--y', `${row.offsetTop}px`);
+    timeline.style.setProperty('--h', `${row.offsetHeight}px`);
+  }
   function showStep() {
     const lead = rowStep ?? scrollStep;   // the dial turns to this one
     const step = stageStep ?? lead;       // this one is lit
@@ -56,6 +69,7 @@
         if (i === step) row.setAttribute('aria-current', 'step');
         else row.removeAttribute('aria-current');
       });
+      placeMarker();
       if (clockTime) clockTime.textContent = rows[step].dataset.time;
       if (clockWhat) clockWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
     }
@@ -82,6 +96,7 @@
   const prizeTotal = prizeRows.reduce((sum, row) => sum + Number(row.dataset.amount) * Number(row.dataset.teams), 0);
   if (prizeRows.length) {
     document.querySelectorAll('[data-prize-total]').forEach(el => { el.textContent = `${prizeTotal}만원`; });
+    document.querySelectorAll('[data-prize-sum]').forEach(el => { el.textContent = prizeTotal; });
   }
   prizeRows.forEach((row, i) => {
     row.addEventListener('pointerenter', () => focusStage('podium', i));
@@ -96,8 +111,8 @@
     counted = true;
     const began = performance.now();
     const frame = now => {
-      const t = clamp((now - began) / 1100, 0, 1);
-      el.textContent = `${Math.round(prizeTotal * (1 - Math.pow(1 - t, 3)))}만원`;
+      const t = clamp((now - began) / 1400, 0, 1);
+      el.textContent = Math.round(prizeTotal * (1 - Math.pow(1 - t, 4)));
       if (t < 1) requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
@@ -129,9 +144,11 @@
   });
   function refreshDates() {
     const now = Date.now();
-    const next = milestones.find(m => m.date.getTime() > now);
+    const today = kstDay(now);
+    // a milestone holds through its own day: on 11.14 the hackathon is today, not done at 9 am
+    const next = milestones.find(m => kstDay(m.date.getTime()) >= today);
     milestones.forEach(m => {
-      m.el.classList.toggle('is-done', m.date.getTime() <= now);
+      m.el.classList.toggle('is-done', kstDay(m.date.getTime()) < today);
       m.el.classList.toggle('is-next', m === next);
       m.badge.textContent = m === next ? dday(m.date) : '';
     });
@@ -153,7 +170,7 @@
   refreshDates();
   setInterval(refreshDates, 60000);
 
-  // ----- Scroll: progress bar, current scene, schedule step -----
+  // ----- Scroll: progress, current scene, schedule step -----
   let pinned = false;
   let current = '';
   let ticking = false;
@@ -162,11 +179,13 @@
     const y = window.scrollY;
     const vh = window.innerHeight;
     const max = root.scrollHeight - vh;
-    if (bar) bar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1) : 0);
-    if (topbar) topbar.classList.toggle('is-scrolled', y > 24);
+    if (topbar) {
+      topbar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1).toFixed(4) : 0);
+      topbar.classList.toggle('is-scrolled', y > 8);
+    }
 
-    // where the stage is pinned across the top, the readable area starts under it
-    const shade = wide.matches || !stage ? 0 : Math.max(0, stage.getBoundingClientRect().bottom);
+    // the readable area starts under the top bar
+    const shade = topbar ? topbar.offsetHeight : 0;
     const line = shade + (vh - shade) * 0.45;
 
     let scene = scenes[0];
@@ -179,7 +198,6 @@
         else tab.removeAttribute('aria-current');
       });
       if (current === 'prizes') countUp();
-      document.body.classList.toggle('is-apply-visible', current !== 'intro');
     }
 
     if (!rows.length) return;
@@ -209,23 +227,45 @@
   }
   function layout() {
     pinned = !!pin && getComputedStyle(pin).position === 'sticky';
+    placeMarker();
     requestUpdate();
   }
   window.addEventListener('scroll', requestUpdate, { passive: true });
   window.addEventListener('resize', layout);
+  // the rows change height once the fonts are in
+  if (document.fonts) document.fonts.ready.then(layout);
   layout();
   update();
 
-  // ----- Scenes rise into place the first time they scroll in (see style.css) -----
+  // ----- Small screens: the apply button docks to the bottom while neither large one is in sight -----
+  const ways = [document.getElementById('apply'), document.getElementById('footer')].filter(Boolean);
+  if (ways.length && 'IntersectionObserver' in window) {
+    const inSight = new Map(ways.map(el => [el, true]));
+    // under the top bar counts as out of sight
+    const watch = new IntersectionObserver(entries => {
+      entries.forEach(entry => inSight.set(entry.target, entry.isIntersecting));
+      document.body.classList.toggle('is-docked', ![...inSight.values()].some(Boolean));
+    }, { rootMargin: `-${topbar ? topbar.offsetHeight : 0}px 0px 0px 0px` });
+    ways.forEach(el => watch.observe(el));
+  }
+
+  // ----- Reveals: each block of a chapter rises in the first time it scrolls into view (see style.css) -----
   if (!reduceMotion && 'IntersectionObserver' in window) {
+    scenes.forEach(scene => {
+      if (scene.classList.contains('hero')) return;   // the intro has its own entrance
+      [...scene.querySelectorAll('.scene-body > *')].forEach((el, i) => {
+        el.setAttribute('data-reveal', '');
+        el.style.setProperty('--i', i);
+      });
+    });
     root.classList.add('reveal-on');
-    const io = new IntersectionObserver(entries => {
+    const reveal = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-seen');
-        io.unobserve(entry.target);
+        entry.target.classList.add('is-in');
+        reveal.unobserve(entry.target);
       });
-    }, { rootMargin: '0px 0px -18% 0px' });
-    scenes.forEach(scene => io.observe(scene));
+    }, { rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('[data-reveal]').forEach(el => reveal.observe(el));
   }
 })();
