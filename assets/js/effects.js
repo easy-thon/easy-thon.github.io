@@ -14,6 +14,7 @@
   const stage = document.getElementById('stage');
   const scenes = [...document.querySelectorAll('.scene')];
   const tabs = [...document.querySelectorAll('.nav a')];
+  const mobileLayout = window.matchMedia('(max-width: 1023px)');
 
   const focusStage = (group, index) => {
     document.dispatchEvent(new CustomEvent('stage:focus', { detail: { group, index } }));
@@ -186,7 +187,9 @@
 
     // the readable area starts under the top bar
     const shade = topbar ? topbar.offsetHeight : 0;
-    const line = shade + (vh - shade) * 0.45;
+    // Keep the current mobile scene visible longer before the backdrop changes.
+    const sceneLine = mobileLayout.matches ? 0.25 : 0.45;
+    const line = shade + (vh - shade) * sceneLine;
 
     let scene = scenes[0];
     scenes.forEach(el => { if (el.getBoundingClientRect().top <= line) scene = el; });
