@@ -1,10 +1,10 @@
 // EasyThon 2026, page behaviour: smooth scrolling, which scene is on screen, the schedule stepper, live dates,
-// the apply dock, reveals, and the link between the lists and the 3D stage (assets/js/scene.js).
+// the apply dock, reveals, and the link between the lists and the 3D stage (assets/js/stage/).
 //
-// The two files only talk through events on document:
-//   stage:focus  { group, index }   a list row is in focus         (this file -> scene.js)
-//   stage:hover  { group, index }   a 3D bar is under the pointer  (scene.js -> this file)
-// group is 'clock' (schedule rows) or 'podium' (prize rows); index null means none.
+// The two only talk through events on document:
+//   stage:focus  { group, index }   a list row is in focus         (this file -> the stage)
+//   stage:hover  { group, index }   a 3D key is under the pointer  (the stage -> this file)
+// group is 'day' (schedule rows) or 'prize' (prize rows); index null means none.
 (() => {
   const root = document.documentElement;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,8 +30,8 @@
   const pin = schedule && schedule.querySelector('.scene-pin');
   const timeline = document.getElementById('timeline');
   const rows = [...document.querySelectorAll('#timeline .tl-row')];
-  const clockTime = document.querySelector('[data-clock-time]');
-  const clockWhat = document.querySelector('[data-clock-what]');
+  const noteTime = document.querySelector('[data-note-time]');
+  const noteWhat = document.querySelector('[data-note-what]');
   const startsAt = rows.map(row => {
     const [hours, minutes] = row.dataset.time.split(':').map(Number);
     return hours * 60 + minutes;
@@ -51,7 +51,7 @@
 
   let scrollStep = 0;     // where the scroll position is in the day
   let rowStep = null;     // a row under the pointer
-  let stageStep = null;   // a dial segment under the pointer, reported by scene.js
+  let stageStep = null;   // a key of the clock's dial under the pointer, reported by the stage
   let lit = -1;
   let led = -1;
   // the ink block behind the lit row slides to it
@@ -62,22 +62,22 @@
     timeline.style.setProperty('--h', `${row.offsetHeight}px`);
   }
   function showStep() {
-    const lead = rowStep ?? scrollStep;   // the dial turns to this one
+    const lead = rowStep ?? scrollStep;   // the clock on the stage turns to this one
     const step = stageStep ?? lead;       // this one is lit
     if (step !== lit && rows[step]) {
       lit = step;
+      placeMarker();   // measured before the rows change
       rows.forEach((row, i) => {
         if (i === step) row.setAttribute('aria-current', 'step');
         else row.removeAttribute('aria-current');
       });
-      placeMarker();
-      if (clockTime) clockTime.textContent = rows[step].dataset.time;
-      if (clockWhat) clockWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
+      if (noteTime) noteTime.textContent = rows[step].dataset.time;
+      if (noteWhat) noteWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
     }
     if (lead !== led) {
       led = lead;
-      if (stage) stage.dataset.step = lead;   // scene.js starts from here if it loads later
-      focusStage('clock', lead);
+      if (stage) stage.dataset.step = lead;   // the stage starts from here if it loads later
+      focusStage('day', lead);
     }
   }
   rows.forEach((row, i) => {
@@ -100,8 +100,8 @@
     document.querySelectorAll('[data-prize-sum]').forEach(el => { el.textContent = prizeTotal; });
   }
   prizeRows.forEach((row, i) => {
-    row.addEventListener('pointerenter', () => focusStage('podium', i));
-    row.addEventListener('pointerleave', () => focusStage('podium', null));
+    row.addEventListener('pointerenter', () => focusStage('prize', i));
+    row.addEventListener('pointerleave', () => focusStage('prize', null));
   });
 
   // the total counts up the first time its scene comes up
@@ -121,10 +121,10 @@
 
   document.addEventListener('stage:hover', e => {
     const { group, index } = e.detail;
-    if (group === 'clock') {
+    if (group === 'day') {
       stageStep = index;
       showStep();
-    } else if (group === 'podium') {
+    } else if (group === 'prize') {
       prizeRows.forEach((row, i) => row.classList.toggle('is-hot', i === index));
     }
   });
@@ -175,15 +175,13 @@
   let pinned = false;
   let current = '';
   let ticking = false;
+  // Every measurement first, then every change: a measurement taken after a change makes the browser lay the page out
+  // again on the spot, once more each frame of the scroll
   function update() {
     ticking = false;
     const y = window.scrollY;
     const vh = window.innerHeight;
     const max = root.scrollHeight - vh;
-    if (topbar) {
-      topbar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1).toFixed(4) : 0);
-      topbar.classList.toggle('is-scrolled', y > 8);
-    }
 
     // the readable area starts under the top bar
     const shade = topbar ? topbar.offsetHeight : 0;
@@ -193,23 +191,13 @@
 
     let scene = scenes[0];
     scenes.forEach(el => { if (el.getBoundingClientRect().top <= line) scene = el; });
-    if (scene && scene.id !== current) {
-      current = scene.id;
-      document.body.dataset.sceneNow = current;
-      tabs.forEach(tab => {
-        if (tab.getAttribute('href') === `#${current}`) tab.setAttribute('aria-current', 'true');
-        else tab.removeAttribute('aria-current');
-      });
-      if (current === 'prizes') countUp();
-    }
 
-    if (!rows.length) return;
-    if (pinned) {
+    if (rows.length && pinned) {
       // the schedule holds still: the distance scrolled through it picks the row
       const box = schedule.getBoundingClientRect();
       const travel = box.height - vh;
       scrollStep = travel > 1 ? Math.round(clamp(-box.top / travel, 0, 1) * (rows.length - 1)) : 0;
-    } else {
+    } else if (rows.length) {
       // the schedule scrolls by: the row nearest the middle of the readable area leads
       let gap = Infinity;
       rows.forEach((row, i) => {
@@ -221,7 +209,21 @@
         }
       });
     }
-    showStep();
+
+    if (topbar) {
+      topbar.style.setProperty('--p', max > 0 ? clamp(y / max, 0, 1).toFixed(4) : 0);
+      topbar.classList.toggle('is-scrolled', y > 8);
+    }
+    if (scene && scene.id !== current) {
+      current = scene.id;
+      document.body.dataset.sceneNow = current;
+      tabs.forEach(tab => {
+        if (tab.getAttribute('href') === `#${current}`) tab.setAttribute('aria-current', 'true');
+        else tab.removeAttribute('aria-current');
+      });
+      if (current === 'prizes') countUp();
+    }
+    if (rows.length) showStep();
   }
   function requestUpdate() {
     if (ticking) return;
@@ -250,6 +252,25 @@
       document.body.classList.toggle('is-docked', ![...inSight.values()].some(Boolean));
     }, { rootMargin: `-${topbar ? topbar.offsetHeight : 0}px 0px 0px 0px` });
     ways.forEach(el => watch.observe(el));
+  }
+
+  // ----- The end of the page: the enter key opens the application too, as the big key on the stage says -----
+  const footer = document.getElementById('footer');
+  const footerApply = document.getElementById('footer-apply');
+  const footerKey = document.querySelector('.footer-key');
+  if (footer && footerApply && 'IntersectionObserver' in window) {
+    let atEnd = false;
+    new IntersectionObserver(([entry]) => { atEnd = entry.isIntersecting; }, { threshold: 0.35 }).observe(footer);
+    window.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      // only from the page itself: a focused link or button keeps its own enter
+      if (!atEnd || footerApply.hidden || document.activeElement !== document.body) return;
+      if (footerKey) footerKey.classList.add('is-pressed');
+      footerApply.click();
+    });
+    window.addEventListener('keyup', e => {
+      if (e.key === 'Enter' && footerKey) footerKey.classList.remove('is-pressed');
+    });
   }
 
   // ----- Reveals: each block of a chapter rises in the first time it scrolls into view (see style.css) -----
