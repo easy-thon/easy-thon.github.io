@@ -9,6 +9,7 @@
 //   layouts.js   where every key goes in every formation (plain numbers)
 //   keycap.js    the cap shape and its shaders, shared by all keys and the plate
 //   legends.js   the printed legends, drawn into one atlas
+//   sound.js     the keys' sound, made on the spot (several switches, picked in the intro)
 //   main.js      this file: light, scroll, motion, the pointer and the keyboard
 // They are plain scripts sharing window.EasyThonStage (not ES modules), so the page also works opened straight from
 // disk; only three.js itself is imported, from the CDN.
@@ -1023,7 +1024,7 @@
         else key.turn.slerp(spin, 1 - Math.exp(-16 * dt));
 
         // presses: by the pointer, a tap (the board typing, a click), or the visitor's own keyboard
-        const down = (k === hovered && weight.keyboard + weight.countdown + weight.enter > 0.5) || k === pressing || held.has(k)
+        const down = (k === hovered && hoverPresses()) || k === pressing || held.has(k)
           || now < key.holdUntil;
         if (reduceMotion) key.press = down ? 1 : 0;
         else {
@@ -1247,6 +1248,8 @@
       if (broken) return;
       // fixed from here on, so it is measured where it stays
       stage.classList.add('is-live');
+      // the sound picker in the intro comes up with the board
+      if (picker && sound && sound.supported) picker.hidden = false;
       resize();
       if (!liveAt) liveAt = performance.now();
       scrollY = window.scrollY;
@@ -1269,6 +1272,24 @@
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(tick);
     }
+
+    // ----- Sound: a key sounds as the visitor presses it (sound.js), by its size on stage and where it stands -----
+    const picker = document.querySelector('[data-key-sound]');
+    const sound = parts.sound ? parts.sound.create({ picker }) : null;
+    function voice(k, stroke, options = {}) {
+      if (!sound || k < 0) return;
+      const slot = (a ? leading() : formations.keyboard).slots[k] || formations.keyboard.slots[k];
+      sound.play({
+        code: keys[k].code,
+        size: slot ? slot.w * (slot.scale || 1) : 1,
+        pan: slot ? clamp(slot.x / 7, -1, 1) : 0,
+        stroke,
+        ...options,
+      });
+    }
+    // the pointer passing over a key presses it while the board, the sign or the big key is up
+    const hoverPresses = () => weight.keyboard + weight.countdown + weight.enter > 0.5;
+    let hoverSoundAt = 0;
 
     // ----- Input -----
     document.addEventListener('stage:focus', e => {
@@ -1333,8 +1354,10 @@
       }
     }
 
-    // the visitor's own keyboard plays the board while it is on stage (never while they type into a field)
-    const typingInto = el => el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+    // The visitor's own keyboard plays the board while it is on stage, wherever the pointer is, and it sounds (never
+    // while they type into a field; the sound picker's radios are not fields, so a switch just picked can be tried)
+    const typingInto = el => el && (el.isContentEditable || /^(TEXTAREA|SELECT)$/.test(el.tagName)
+      || (el.tagName === 'INPUT' && !/^(radio|checkbox|button|submit|reset)$/i.test(el.type)));
     window.addEventListener('keydown', e => {
       if (e.metaKey || e.ctrlKey || typingInto(e.target)) return;
       const k = keyIndex.get(e.code);
@@ -1342,11 +1365,13 @@
       held.add(k);
       humanAt = performance.now();
       dirty = true;
-      if (!e.repeat) typeLetter(k);
+      if (e.repeat) return;
+      voice(k, 'down', { gesture: true });
+      typeLetter(k);
     });
     window.addEventListener('keyup', e => {
       const k = keyIndex.get(e.code);
-      if (k !== undefined) held.delete(k);
+      if (k !== undefined && held.delete(k)) voice(k, 'up', { gesture: true });
     });
     window.addEventListener('blur', () => held.clear());
 
@@ -1362,6 +1387,7 @@
       downY = lastY = e.clientY;
       yawSpeed = pitchSpeed = 0;
       pressing = keyAt(e.clientX, e.clientY);
+      voice(pressing, 'down', { gesture: true });
       humanAt = performance.now();
       stage.setPointerCapture(e.pointerId);
     });
@@ -1372,6 +1398,7 @@
         // a press turns into a drag once the pointer travels
         if (!dragging && Math.hypot(e.clientX - downX, e.clientY - downY) > 6) {
           dragging = true;
+          if (pressing !== hovered || !hoverPresses()) voice(pressing, 'up');
           pressing = -1;
         }
         if (dragging) {
@@ -1389,12 +1416,21 @@
       pointer.x = e.clientX;
       pointer.y = e.clientY;
       pointer.over = true;
+      const was = hovered;
       pick();
+      // passing over a key presses it, lightly (a quick sweep across the board is not a burst: one every 30 ms at most)
+      const now = performance.now();
+      if (hovered >= 0 && hovered !== was && hoverPresses() && now - hoverSoundAt > 30) {
+        hoverSoundAt = now;
+        voice(hovered, 'down', { soft: true });
+      }
     });
     const release = e => {
       if (downAt !== e.pointerId) return;
       downAt = -1;
       if (pressing >= 0) tap(pressing, 90);
+      // and it comes back up, unless the pointer still rests on it
+      if (pressing !== hovered || !hoverPresses()) voice(pressing, 'up', { delay: 0.09 });
       // a click on a letter types it, so the name can be spelled with the pointer too
       if (!dragging && pressing >= 0 && e.type === 'pointerup' && weight.keyboard > 0.5) typeLetter(pressing);
       if (!dragging && onEnter(pressing) && e.type === 'pointerup') {

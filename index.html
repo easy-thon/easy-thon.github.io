@@ -94,6 +94,15 @@
       </h1>
       <p class="hero-line hero-tagline">누구나 쉽게 참여하는 해커톤</p>
       <p class="hero-line hero-when"><span>2026.11.14 (토)</span><span>미디어센터 507호</span></p>
+      <!-- the keys' sound (assets/js/stage/sound.js): shown beside the board once it is up, on wide screens -->
+      <div class="key-sound" data-key-sound role="radiogroup" aria-labelledby="key-sound-label" hidden>
+        <span id="key-sound-label" class="key-sound-label">키보드 소리</span>
+        <label><input type="radio" name="key-sound" value="thock" checked /><span class="key-cap">도각</span></label>
+        <label><input type="radio" name="key-sound" value="clicky" /><span class="key-cap">청축</span></label>
+        <label><input type="radio" name="key-sound" value="linear" /><span class="key-cap">적축</span></label>
+        <label><input type="radio" name="key-sound" value="typewriter" /><span class="key-cap">타자기</span></label>
+        <label><input type="radio" name="key-sound" value="off" /><span class="key-cap">끄기</span></label>
+      </div>
     </section>
 
     <!-- About: what it is, and everything needed to sign up -->

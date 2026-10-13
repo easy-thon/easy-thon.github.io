@@ -4,7 +4,7 @@
 // from disk, where module scripts are refused. Without WebGL the stage simply stays empty.
 (() => {
   const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.min.js';
-  const PARTS = ['layouts', 'legends', 'keycap', 'main'];
+  const PARTS = ['layouts', 'legends', 'keycap', 'sound', 'main'];
 
   const stage = document.getElementById('stage');
   const canvas = document.getElementById('scene');
@@ -39,7 +39,7 @@
     });
   }
 
-  // in order: main.js uses the other three
+  // in order: main.js uses the others
   const load = name => new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = new URL(`${name}.js`, here).href;
