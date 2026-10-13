@@ -9,7 +9,7 @@
 //   layouts.js   where every key goes in every formation (plain numbers)
 //   keycap.js    the cap shape and its shaders, shared by all keys and the plate
 //   legends.js   the printed legends, drawn into one atlas
-//   sound.js     the keys' sound, made on the spot (several switches, picked in the intro)
+//   sound.js     the keys' sound: real keyboards, recorded (assets/sounds/), picked in the intro
 //   main.js      this file: light, scroll, motion, the pointer and the keyboard
 // They are plain scripts sharing window.EasyThonStage (not ES modules), so the page also works opened straight from
 // disk; only three.js itself is imported, from the CDN.
@@ -1248,8 +1248,12 @@
       if (broken) return;
       // fixed from here on, so it is measured where it stays
       stage.classList.add('is-live');
-      // the sound picker in the intro comes up with the board
-      if (picker && sound && sound.supported) picker.hidden = false;
+      // the sound picker in the intro comes up with the board; beside the story (where the board is played by hand)
+      // the keyboard in use is loaded ahead of the first key
+      if (picker && sound && sound.supported) {
+        picker.hidden = false;
+        if (!narrow) sound.prepare();
+      }
       resize();
       if (!liveAt) liveAt = performance.now();
       scrollY = window.scrollY;
