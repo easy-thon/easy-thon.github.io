@@ -95,8 +95,8 @@
       <p class="hero-line hero-tagline">누구나 쉽게 참여하는 해커톤</p>
       <p class="hero-line hero-when"><span>2026.11.14 (토)</span><span>미디어센터 507호</span></p>
       <!-- The keys' sound (assets/js/stage/sound.js): real keyboards, recorded (assets/sounds/). The cap under the
-           board's hint names the one in use and opens the list; the first is the default. Shown once the board is
-           up, on wide screens -->
+           board's hint names the one in use and opens the list, by kind of keyboard; the first is the default.
+           Shown once the board is up, on wide screens -->
       <div class="key-sound" data-key-sound hidden>
         <span id="key-sound-label" class="key-sound-label">키보드 소리</span>
         <button type="button" class="key-sound-now" aria-expanded="false" aria-controls="key-sound-list"
@@ -106,17 +106,28 @@
         </button>
         <div id="key-sound-list" class="key-sound-list" role="radiogroup" aria-labelledby="key-sound-label"
           data-key-sound-list hidden>
-          <label><input type="radio" name="key-sound" value="mac" /><span class="key-cap">매킨토시</span><span
-              class="key-sound-what">Macintosh SE/30 · 또각또각 맑은 클릭</span></label>
+          <p class="key-sound-group">기계식</p>
           <label><input type="radio" name="key-sound" value="model-m" /><span class="key-cap">버클링</span><span
-              class="key-sound-what">IBM Model M · 스프링이 꺾이는 소리</span></label>
+              class="key-sound-what">IBM Model M · 꺾이는 스프링</span></label>
           <label><input type="radio" name="key-sound" value="model-f" /><span class="key-cap">모델 F</span><span
-              class="key-sound-what">IBM Model F (1984) · 맑게 울리는 스프링</span></label>
-          <label><input type="radio" name="key-sound" value="typewriter" /><span class="key-cap">타자기</span><span
-              class="key-sound-what">Smith-Corona 전동 타자기 · 엔터에 종소리</span></label>
+              class="key-sound-what">IBM Model F · 맑게 울리는 스프링</span></label>
+          <label><input type="radio" name="key-sound" value="mac" /><span class="key-cap">매킨토시</span><span
+              class="key-sound-what">Macintosh SE/30 · 또각또각</span></label>
+          <p class="key-sound-group">노트북 · 사무용</p>
+          <label><input type="radio" name="key-sound" value="laptop" /><span class="key-cap">맥북 프로</span><span
+              class="key-sound-what">MacBook Pro · 얇은 노트북 키</span></label>
+          <label><input type="radio" name="key-sound" value="apple" /><span class="key-cap">애플 키보드</span><span
+              class="key-sound-what">Apple Keyboard · 바삭한 알루미늄</span></label>
+          <label><input type="radio" name="key-sound" value="raspberry" /><span class="key-cap">라즈베리 파이</span><span
+              class="key-sound-what">Raspberry Pi 키보드 · 경쾌한</span></label>
           <label><input type="radio" name="key-sound" value="membrane" /><span class="key-cap">멤브레인</span><span
               class="key-sound-what">Cherry KC 1000 · 사무실 키보드</span></label>
-          <label><input type="radio" name="key-sound" value="off" /><span class="key-cap">끄기</span><span
+          <p class="key-sound-group">타자기</p>
+          <label><input type="radio" name="key-sound" value="typewriter" /><span class="key-cap">타자기</span><span
+              class="key-sound-what">Hermes 305 · 종소리와 줄바꿈</span></label>
+          <label><input type="radio" name="key-sound" value="electric-typewriter" /><span class="key-cap">전동 타자기</span><span
+              class="key-sound-what">Smith-Corona · 모터가 치는 활자</span></label>
+          <label class="key-sound-off"><input type="radio" name="key-sound" value="off" /><span class="key-cap">끄기</span><span
               class="key-sound-what">소리 없이</span></label>
           <p class="key-sound-source">실제 키보드를 녹음한 소리입니다 · <a href="#sound-credits" data-key-sound-credits>녹음 출처</a></p>
         </div>
@@ -361,16 +372,24 @@
           <a href="https://commons.wikimedia.org/wiki/File:IBM_M2_sound.ogg" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>, CC0 1.0</li>
         <li data-sound="model-f">모델 F: “Typing - Model F 122 1984”, Raymangold22,
           <a href="https://commons.wikimedia.org/wiki/File:Typing_-_Model_F_122_1984.ogg" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>, CC0 1.0</li>
-        <li data-sound="typewriter">타자기: “Smith-Corona Prestige Auto 12 typing”, lonemonk,
+        <li data-sound="mac">매킨토시: “WWS MacintoshSE30typing”, Work With Sounds / Torsten Nilsson,
+          <a href="https://commons.wikimedia.org/wiki/File:WWS_MacintoshSE30typing.ogg" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>,
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> (잘라냄, 잡음 줄임, 음량 조절)</li>
+        <li data-sound="laptop">맥북 프로: “Slow MacBook Pro keyboard #1, #2”, Joseph Sardin,
+          <a href="https://bigsoundbank.com/slow-macbook-pro-keyboard-1-s1728.html" target="_blank" rel="noopener noreferrer">BigSoundBank</a>, CC0 1.0</li>
+        <li data-sound="apple">애플 키보드: “Slow iMac keyboard”, Joseph Sardin,
+          <a href="https://bigsoundbank.com/slow-imac-keyboard-s1730.html" target="_blank" rel="noopener noreferrer">BigSoundBank</a>, CC0 1.0</li>
+        <li data-sound="raspberry">라즈베리 파이: “Slow Raspberry keyboard”, Joseph Sardin,
+          <a href="https://bigsoundbank.com/slow-raspberry-keyboard-s1732.html" target="_blank" rel="noopener noreferrer">BigSoundBank</a>, CC0 1.0</li>
+        <li data-sound="membrane">멤브레인: “Keyboard Soundpack #1”, unicaegames,
+          <a href="https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes" target="_blank" rel="noopener noreferrer">OpenGameArt</a>, CC0 1.0</li>
+        <li data-sound="typewriter">타자기: “Typewriter #2–#8”, “Typewriter, Bell #1”, Joseph Sardin (Hermes Precisa 305),
+          <a href="https://bigsoundbank.com/typewriter-2-s2835.html" target="_blank" rel="noopener noreferrer">BigSoundBank</a>, CC0 1.0</li>
+        <li data-sound="electric-typewriter">전동 타자기: “Smith-Corona Prestige Auto 12 typing”, lonemonk,
           <a href="https://commons.wikimedia.org/wiki/File:Smith-Corona_Prestige_Auto_12_typing.ogg" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>,
           <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a> (잘라냄, 음량 조절);
           종소리 “typewriter-ding-near-mono”, _stubb,
           <a href="https://commons.wikimedia.org/wiki/File:406243_stubb_typewriter-ding-near-mono.wav" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>, CC0 1.0</li>
-        <li data-sound="membrane">멤브레인: “Keyboard Soundpack #1”, unicaegames,
-          <a href="https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes" target="_blank" rel="noopener noreferrer">OpenGameArt</a>, CC0 1.0</li>
-        <li data-sound="mac">매킨토시: “WWS MacintoshSE30typing”, Work With Sounds / Torsten Nilsson,
-          <a href="https://commons.wikimedia.org/wiki/File:WWS_MacintoshSE30typing.ogg" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>,
-          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> (잘라냄, 잡음 줄임, 음량 조절)</li>
       </ul>
     </details>
   </footer>

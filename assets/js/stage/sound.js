@@ -16,7 +16,7 @@
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
   // ----- Packs -----
-  const packs = new Map();   // id -> { ready: Promise, buffer, takes, gain, last: {} }
+  const packs = new Map();   // id -> { ready: Promise, buffer, takes, gain, gains, whole, last: {} }
   const validId = id => /^[a-z0-9-]+$/.test(id || '');
   function decode(bytes) {
     const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -29,7 +29,7 @@
   function load(id) {
     if (!validId(id) || id === OFF || !here) return Promise.resolve(null);
     if (packs.has(id)) return packs.get(id).ready;
-    const pack = { buffer: null, takes: null, gain: 1, last: {} };
+    const pack = { buffer: null, takes: null, gain: 1, gains: {}, whole: [], last: {} };
     pack.ready = new Promise(resolve => {
       const script = document.createElement('script');
       script.src = new URL(`../../sounds/${id}.js`, here).href;
@@ -44,6 +44,7 @@
       pack.takes = data.takes;
       pack.gain = 10 ** ((data.level || 0) / 20);   // brings the keyboards to about the same loudness
       pack.gains = data.gains || {};                // and a kind that borrows another's takes to its own
+      pack.whole = data.whole || [];                // kinds whose takes hold the key coming back up too
       delete window.EasyThonSounds[id];   // the decoded buffer is all that is needed from here
       return decode(bytes.buffer).then(buffer => {
         pack.buffer = buffer;
@@ -108,6 +109,23 @@
       return ctx;
     }
 
+    // one take, a touch higher or lower and louder or softer each time, at its place left to right
+    function sound(c, pack, take, { rate, level, pan, at }) {
+      const source = c.createBufferSource();
+      source.buffer = pack.buffer;
+      source.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * 0.025);
+      const gain = c.createGain();
+      gain.gain.value = level * 10 ** (((Math.random() * 2 - 1) * 1.5) / 20);
+      let node = source.connect(gain);
+      if (c.createStereoPanner) {
+        const panner = c.createStereoPanner();
+        panner.pan.value = clamp(pan, -1, 1) * 0.5;
+        node = node.connect(panner);
+      }
+      node.connect(out);
+      source.start(at, take[0], take[1]);
+    }
+
     // One stroke of one key: code (KeyboardEvent.code), its width in u, where it stands left to right (-1..1), and
     // how hard: soft for the pointer passing over. delay is in s; gesture says this comes straight from a click or
     // a keypress, which may start the sound
@@ -120,39 +138,40 @@
         load(name);   // not here yet: this stroke goes unheard
         return;
       }
-      // the kind of take, and how much lower a wider key sounds where the pack has nothing of its own for it
+      // the kind of take: enter and the space bar where the pack has their own (a whole carriage return is too much
+      // for the pointer passing over), else a key's, lower for a wider key
       const wide = size >= 1.9;
       let kind = 'down';
       let rate = 1;
-      if (stroke === 'up') {
-        kind = 'up';
-        if (wide) rate = 0.93;
-      } else if (code === 'Enter' && pack.takes.enter) kind = 'enter';
-      else if (size >= 4 && pack.takes.space) kind = 'space';
+      if (code === 'Enter' && pack.takes.enter && !(soft && pack.whole.includes('enter'))) kind = 'enter';
       else if (wide && pack.takes.space) {
         kind = 'space';
-        rate = 1.06;
+        if (size < 4) rate = 1.06;
       } else if (wide) rate = 0.92;
+      if (stroke === 'up') {
+        if (pack.whole.includes(kind)) return;   // its take holds the key coming back up too
+        kind = 'up';
+        rate = wide ? 0.93 : 1;
+      }
       const take = takeOf(pack, kind);
       if (!take) return;
-      const source = c.createBufferSource();
-      source.buffer = pack.buffer;
-      source.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * 0.025);
-      const gain = c.createGain();
-      gain.gain.value = pack.gain * (pack.gains[kind] || 1) * (soft ? 0.4 : 1) * 10 ** (((Math.random() * 2 - 1) * 1.5) / 20);
-      let node = source.connect(gain);
-      if (c.createStereoPanner) {
-        const panner = c.createStereoPanner();
-        panner.pan.value = clamp(pan, -1, 1) * 0.5;
-        node = node.connect(panner);
+      const at = c.currentTime + delay;
+      const level = pack.gain * (pack.gains[kind] || 1) * (soft ? 0.4 : 1);
+      sound(c, pack, take, { rate, level, pan, at });
+      // a long key the pack has nothing of its own for: two of its keys a few ms apart, as the two ends of a long
+      // key come down not quite together
+      if (kind === 'down' && wide) {
+        const other = takeOf(pack, 'down');
+        if (other) sound(c, pack, other, { rate: rate * 0.96, level: level * 0.55, pan, at: at + 0.005 + Math.random() * 0.004 });
       }
-      node.connect(out);
-      source.start(c.currentTime + delay, take[0], take[1]);
     }
 
-    // a few keys, to hear a keyboard as it is picked
-    function sample() {
-      [['KeyE', 1, -0.3, 0], ['KeyA', 1, -0.55, 0.14], ['Space', 7, 0, 0.29]].forEach(([code, size, pan, at]) => {
+    // a few keys, to hear a keyboard as it is picked (and its enter, where it has its own)
+    function sample(pack) {
+      const keys = [['KeyE', 1, -0.3], ['KeyA', 1, -0.55], ['Space', 7, 0]];
+      if (pack.takes.enter) keys.push(['Enter', 2.25, 0.7]);
+      keys.forEach(([code, size, pan], i) => {
+        const at = i * 0.145;
         play({ code, size, pan, delay: at, gesture: true });
         play({ code, size, pan, stroke: 'up', delay: at + 0.09, gesture: true });
       });
@@ -166,7 +185,7 @@
       } catch (err) { /* not kept: fine for this visit */ }
       if (name === OFF) return;
       context(true);
-      load(name).then(pack => { if (pack && name === next) sample(); });
+      load(name).then(pack => { if (pack && name === next) sample(pack); });
     }
 
     // The picker in the intro (the stage shows it once the board is up): a cap names the keyboard in use and opens
@@ -185,6 +204,10 @@
         if (e.target.type !== 'radio' || !e.target.checked) return;
         choose(e.target.value);
         named();
+      });
+      // the keyboard in use, picked again: heard again
+      picker.addEventListener('click', e => {
+        if (e.target.type === 'radio' && e.target.value === name) choose(name);
       });
       if (toggle && list) {
         const open = on => {
