@@ -16,7 +16,7 @@
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
   // ----- Packs -----
-  const packs = new Map();   // id -> { ready: Promise, buffer, takes, last: {} }
+  const packs = new Map();   // id -> { ready: Promise, buffer, takes, gain, last: {} }
   const validId = id => /^[a-z0-9-]+$/.test(id || '');
   function decode(bytes) {
     const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -29,7 +29,7 @@
   function load(id) {
     if (!validId(id) || id === OFF || !here) return Promise.resolve(null);
     if (packs.has(id)) return packs.get(id).ready;
-    const pack = { buffer: null, takes: null, last: {} };
+    const pack = { buffer: null, takes: null, gain: 1, last: {} };
     pack.ready = new Promise(resolve => {
       const script = document.createElement('script');
       script.src = new URL(`../../sounds/${id}.js`, here).href;
@@ -42,6 +42,8 @@
       const bytes = new Uint8Array(text.length);
       for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
       pack.takes = data.takes;
+      pack.gain = 10 ** ((data.level || 0) / 20);   // brings the keyboards to about the same loudness
+      pack.gains = data.gains || {};                // and a kind that borrows another's takes to its own
       delete window.EasyThonSounds[id];   // the decoded buffer is all that is needed from here
       return decode(bytes.buffer).then(buffer => {
         pack.buffer = buffer;
@@ -137,7 +139,7 @@
       source.buffer = pack.buffer;
       source.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * 0.025);
       const gain = c.createGain();
-      gain.gain.value = (soft ? 0.4 : 1) * 10 ** (((Math.random() * 2 - 1) * 1.5) / 20);
+      gain.gain.value = pack.gain * (pack.gains[kind] || 1) * (soft ? 0.4 : 1) * 10 ** (((Math.random() * 2 - 1) * 1.5) / 20);
       let node = source.connect(gain);
       if (c.createStereoPanner) {
         const panner = c.createStereoPanner();
