@@ -20,7 +20,7 @@
 // the top bar, where it changes shape for the rest of the page.
 // Events on document (the other end is in effects.js):
 //   stage:focus  { group, index }   a list row is in focus      (effects.js -> here)
-//   stage:hover  { group, index }   a key is under the pointer  (here -> effects.js)
+//   stage:hover  { group, index }   a prize bar is under the pointer (here -> effects.js)
 // group is 'day' (schedule rows) or 'prize' (prize rows); index null means none.
 (parts => {
   const FOV = 28;
@@ -45,8 +45,8 @@
       const [hours, minutes] = el.dataset.time.split(':').map(Number);
       return hours * 60 + minutes;
     });
-    // each session runs until the next one starts; the last gets a nominal half hour
-    const sessions = starts.map((start, i) => ({ start, span: Math.max(15, (starts[i + 1] ?? start + 30) - start) }));
+    // Each session runs until the next one starts; the final entry marks the end of the event.
+    const sessions = starts.map((start, i) => ({ start, span: (starts[i + 1] ?? start) - start }));
 
     const prizeRows = [...document.querySelectorAll('#prize-list [data-amount]')];
     // one award per winning team, in the order of the list (no more than there are keys)
@@ -65,7 +65,7 @@
     const { keycapGeometry, keycapMaterial, keycapDepthMaterial, ATTRIBUTES } = parts.keycap;
     const { createLegends, legendFonts, legendFontsReady } = parts.legends;
     const {
-      boardKeys, buildFormations, countdownFormation, countdownText, legendSpecs, BRAND, COLORS, PLATE_H, CAP_PROFILE,
+      boardKeys, buildFormations, countdownFormation, countdownText, clockSession, legendSpecs, BRAND, COLORS, PLATE_H, CAP_PROFILE,
     } = parts.layouts;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -371,10 +371,34 @@
     let time = 0;
     let step = 0;                                      // schedule row the chart has moved to (fractional on the way)
     let stepGoal = Number(stage.dataset.step) || 0;    // schedule row in focus on the page
+    let dayActive = stage.hasAttribute('data-step');
     let hotRow = null;                                 // prize row in focus on the page
     let hover = { group: null, index: null };          // a list row under the pointer, on the stage
     const heat = { day: page.sessions.map(() => 0), prize: page.prizeRows.map(() => 0) };
-    let clockTime = page.sessions.length ? page.sessions[0].start : 540;   // minutes: where the hands point
+    const firstTime = page.sessions.length ? page.sessions[0].start : 540;
+    const clockHands = {
+      hour: { turn: firstTime / 720, from: firstTime / 720, to: firstTime / 720, period: 720 },
+      minute: { turn: firstTime / 60, from: firstTime / 60, to: firstTime / 60, period: 60 },
+    };
+    let clockTarget = firstTime;
+    let clockProgress = 1;
+    let clockDuration = 0.6;
+    // The minute hand makes two full clockwise turns, then continues to its target; the hour hand takes the
+    // shortest route. New scroll steps start from the current pose instead of queuing extra revolutions.
+    function setClock(minute, snap) {
+      Object.values(clockHands).forEach(hand => {
+        let delta = ((minute / hand.period - hand.turn + 0.5) % 1 + 1) % 1 - 0.5;
+        if (Math.abs(delta + 0.5) < 1e-8) delta = 0.5;   // half a turn: choose clockwise consistently
+        if (hand.period === 60 && !snap) delta = 2 + ((minute / 60 - hand.turn) % 1 + 1) % 1;
+        hand.from = hand.turn;
+        hand.to = hand.turn + delta;
+        if (snap) hand.turn = hand.to;
+      });
+      const minuteTurns = Math.abs(clockHands.minute.to - clockHands.minute.from);
+      clockDuration = 0.6 + Math.max(0, minuteTurns - 2) * 0.2;
+      clockTarget = minute;
+      clockProgress = snap ? 1 : 0;
+    }
     let hotPrize = 0;                                                       // how hot the hottest prize row is
     // the sign is set again when the day turns (a page left open overnight)
     let signText = formations.countdown.text;
@@ -420,23 +444,22 @@
           break;
         }
         case 'tick': {
-          // the half hours before the session in focus are ink, the session itself red and raised, the rest of the
+          // the ticks before the session in focus are ink, the session itself red, the rest of the
           // day porcelain, and the hours outside it a step down in stone
-          if (slot.session < 0) {
+          const session = clockSession(slot, Math.round(stepGoal));
+          if (session < 0) {
             out.tint.copy(STONE);
             out.pos.y -= 0.04;
             break;
           }
-          const lit = heat.day[slot.session];
-          out.tint.lerp(INK, clamp(step - slot.session, 0, 1)).lerp(RED, lit);
-          out.pos.y += 0.16 * lit;
+          const lit = heat.day[session];
+          out.tint.lerp(INK, clamp(step - session, 0, 1)).lerp(RED, lit);
           out.glow = 0.05 * lit;
           break;
         }
         case 'hand': {
-          // turned round the pin to the time of the session in focus: the hour hand once in twelve hours, the
-          // minute hand once an hour. Hands are rigid, so they skip the springs
-          const turns = clockTime / (slot.hand === 'hour' ? 720 : 60);
+          // Independent angles let each hand settle directly on the selected time. Hands skip the springs.
+          const turns = clockHands[slot.hand].turn;
           const angle = (turns - Math.floor(turns)) * Math.PI * 2;
           const reach = slot.w / 2 - slot.back;
           out.pos.x = Math.sin(angle) * reach;
@@ -488,6 +511,8 @@
     function measure() {
       const vh = window.innerHeight;
       narrow = !wide.matches;
+      const shade = document.getElementById('topbar')?.offsetHeight || 0;
+      const readingLine = shade + (vh - shade) * (narrow ? 0.35 : 0.45);
       const end = Math.max(0, document.documentElement.scrollHeight - vh);
       footerTop = footer ? footer.getBoundingClientRect().top + window.scrollY : Infinity;
       marks = sceneEls.map((el, i) => {
@@ -500,8 +525,18 @@
         const afterIntro = i > 0 && sceneEls[i - 1].dataset.frame === 'center';
         let a = narrow || afterIntro ? top - vh * 0.35 : top;
         let b = top + box.height - vh * (narrow ? 0.75 : 1);
-        if (b < a) a = b = (a + b) / 2;
         const shape = el.dataset.scene in formations ? el.dataset.scene : 'keyboard';
+        // Keep the clock through the last visible row, then finish the change to prizes at the same reading
+        // line used by effects.js. Short screens do not have a pinned schedule, so measure the actual last row.
+        if (shape === 'day' && !el.classList.contains('is-pinned')) {
+          const lastRow = el.querySelector('.tl-row:last-child');
+          if (lastRow) {
+            const row = lastRow.getBoundingClientRect();
+            b = Math.max(a, window.scrollY + (row.top + row.bottom) / 2 - readingLine);
+          }
+        }
+        if (i > 0 && sceneEls[i - 1].dataset.scene === 'day') a = top - readingLine;
+        if (b < a) a = b = (a + b) / 2;
         return { a, b, shape, frame: el.dataset.frame || 'side' };
       });
       windows = narrow
@@ -958,21 +993,28 @@
       weight[b.shape] += blend;
 
       // highlights ease in and out
-      step = reduceMotion ? stepGoal : damp(step, stepGoal, 6, dt);
-      const litStep = hover.group === 'day' ? hover.index : Math.round(stepGoal);
+      step = reduceMotion ? stepGoal : damp(step, stepGoal, 14, dt);
+      const litStep = dayActive ? Math.round(stepGoal) : -1;
       const litRow = hover.group === 'prize' ? hover.index : hotRow;
       heat.day.forEach((v, i) => { heat.day[i] = reduceMotion ? +(i === litStep) : damp(v, +(i === litStep), 10, dt); });
       heat.prize.forEach((v, i) => { heat.prize[i] = reduceMotion ? +(i === litRow) : damp(v, +(i === litRow), 10, dt); });
       hotPrize = Math.max(0, ...heat.prize);
       if (Math.abs(step - stepGoal) > 0.002 || heat.day.some((v, i) => Math.abs(v - +(i === litStep)) > 0.003)
         || heat.prize.some((v, i) => Math.abs(v - +(i === litRow)) > 0.003)) stir = true;
-      // the hands sweep to the session in focus: the minute hand round once for every hour on the way, at most four
-      // turns a second (off stage they are simply set)
-      const lit = page.sessions[clamp(litStep, 0, page.sessions.length - 1)];
+      // Respond immediately, then ease to a stop over 0.6–0.8 seconds. Off stage and with reduced motion,
+      // both hands go straight to the selected time.
+      const lit = page.sessions[clamp(Math.round(stepGoal), 0, page.sessions.length - 1)];
       if (lit) {
-        if (reduceMotion || weight.day === 0) clockTime = lit.start;
-        else clockTime += clamp((lit.start - clockTime) * (1 - Math.exp(-5 * dt)), -240 * dt, 240 * dt);
-        if (Math.abs(lit.start - clockTime) > 0.5) stir = true;
+        const snap = reduceMotion || weight.day === 0;
+        if (lit.start !== clockTarget || (snap && clockProgress < 1)) setClock(lit.start, snap);
+        if (clockProgress < 1) {
+          clockProgress = Math.min(1, clockProgress + dt / clockDuration);
+          const clockEase = 1 - (1 - clockProgress) ** 2;
+          Object.values(clockHands).forEach(hand => {
+            hand.turn = lerp(hand.from, hand.to, clockEase);
+          });
+          stir = true;
+        }
       }
 
       // the board types the name while it is centre stage and nobody else is typing
@@ -1094,8 +1136,8 @@
         yaw += yawSpeed * dt;
         pitch += pitchSpeed * dt;
       }
-      lookX = damp(lookX, lookGoalX, 4, dt);
-      lookY = damp(lookY, lookGoalY, 4, dt);
+      lookX = damp(lookX, lookGoalX * (1 - weight.day), 8, dt);
+      lookY = damp(lookY, lookGoalY * (1 - weight.day), 8, dt);
       if (Math.abs(yaw) + Math.abs(pitch) > 0.002 || Math.abs(lookX - lookGoalX) + Math.abs(lookY - lookGoalY) > 0.003) {
         stir = true;
       }
@@ -1155,7 +1197,8 @@
       const clear = clamp(((footerTop - window.scrollY) / window.innerHeight - 0.45) / 0.3, 0, 1);
       notes.forEach(note => {
         // the big key only invites a press while the application is open
-        const on = narrow || (note.name === 'enter' && !linkOpen) ? 0 : clamp((weight[note.name] - 0.75) / 0.25, 0, 1) * clear;
+        const hidden = narrow || (note.name === 'day' && !dayActive) || (note.name === 'enter' && !linkOpen);
+        const on = hidden ? 0 : clamp((weight[note.name] - 0.75) / 0.25, 0, 1) * clear;
         const text = on.toFixed(2);
         if (note.shown === text) return;
         note.shown = text;
@@ -1252,7 +1295,7 @@
       scrollY = window.scrollY;
       step = stepGoal;
       const lead = page.sessions[clamp(Math.round(stepGoal), 0, page.sessions.length - 1)];
-      if (lead) clockTime = lead.start;
+      if (lead) setClock(lead.start, true);
       // every key starts where it belongs, so the opening drop is the only motion
       locate();
       for (let k = 0; k < N; k++) {
@@ -1273,7 +1316,10 @@
     // ----- Input -----
     document.addEventListener('stage:focus', e => {
       const { group, index } = e.detail;
-      if (group === 'day' && index !== null) stepGoal = index;
+      if (group === 'day') {
+        dayActive = index !== null;
+        if (dayActive) stepGoal = index;
+      }
       if (group === 'prize') hotRow = index;
       dirty = true;
       movedAt = performance.now();
@@ -1293,8 +1339,7 @@
     function pick() {
       hovered = keyAt(pointer.x, pointer.y);
       const slot = hovered >= 0 ? leading().slots[hovered] : null;
-      if (slot && slot.role === 'tick' && slot.session >= 0 && weight.day > 0.85) setHover('day', slot.session);
-      else if (slot && slot.role === 'bar' && weight.prizes > 0.85) setHover('prize', slot.prize);
+      if (slot && slot.role === 'bar' && weight.prizes > 0.85) setHover('prize', slot.prize);
       else setHover(null, null);
       stage.classList.toggle('is-pointing', onEnter(hovered) && linkOpen);
     }
