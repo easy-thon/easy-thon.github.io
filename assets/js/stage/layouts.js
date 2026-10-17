@@ -138,35 +138,28 @@
     return { targets, text, plate: { w: width + MARGIN * 2, d: 5 + MARGIN * 2 }, view: [1.1, -0.07] };
   }
 
-  // Keep the original half-hour keys; the hands alone show quarter-hour session starts.
-  // A day longer than twelve hours can use the same tick twice. Resolve it near the focused session so the
-  // evening sessions remain reachable without changing the twelve-hour dial.
-  function clockSession(slot, focus) {
-    return slot.sessions.reduce((nearest, index) => (
-      nearest < 0 || Math.abs(index - focus) < Math.abs(nearest - focus) ? index : nearest
-    ), -1);
-  }
-
+  // The day on a clock face. A ring of keys, one per half hour of the dial (the hours larger, with their numerals),
+  // coloured as the day goes by; two flat keys for hands that point at the time of the session in focus, and a red
+  // pin. The day is shorter than the dial, so every key stands for one half hour of it, or for none.
   function clock(page) {
     const R = 3.55;
-    const ticks = Array.from({ length: 24 }, (_, j) => j * 30);
+    const first = page.sessions.length ? Math.floor(page.sessions[0].start / 60) * 60 : 9 * 60;
     const targets = [];
-    for (const tick of ticks) {
-      const angle = (tick / 720) * Math.PI * 2;   // from twelve, clockwise
-      const hour = tick % 60 === 0;
-      const sessions = [];
-      page.sessions.forEach((session, index) => {
-        const elapsed = ((tick - session.start) % 720 + 720) % 720;
-        if (elapsed < session.span || elapsed === 0) sessions.push(index);
-      });
+    for (let j = 0; j < 24; j++) {
+      const angle = (j / 24) * Math.PI * 2;   // from twelve, clockwise
+      const hour = j % 2 === 0;
+      // the minute of the day this key stands for (the dial shows twelve hours, the day starts at its first hour)
+      let minute = j * 30;
+      while (minute < first) minute += 720;
+      while (minute >= first + 720) minute -= 720;
+      const session = page.sessions.findIndex(s => minute >= s.start && minute < s.start + s.span);
       const h = hour ? CAP_H : 0.3;
       targets.push(cap({
         x: R * Math.sin(angle), z: -R * Math.cos(angle), y: capY(h), yaw: -angle,
-        w: hour ? 0.86 : 0.48, d: hour ? 0.96 : 0.48, h,
-        profile: hour ? CAP_PROFILE : [0.06, 0.015],
+        w: hour ? 0.86 : 0.48, d: hour ? 0.96 : 0.48, h, profile: hour ? CAP_PROFILE : [0.06, 0.015],
         // the numerals stay upright however the key is turned
-        legend: hour ? { id: `clock:${tick / 60 || 12}`, at: [0, 0], size: 0.62, turn: angle } : null,
-        role: 'tick', sessions,
+        legend: hour ? { id: `clock:${j / 2 || 12}`, at: [0, 0], size: 0.62, turn: angle } : null,
+        role: 'tick', session, minute,
       }));
     }
     // hands: a length, how far it reaches back past the pin, its width and its height above the plate
@@ -286,7 +279,6 @@
     boardKeys,
     legendSpecs,
     countdownText,
-    clockSession,
     countdownFormation,
     buildFormations,
   };

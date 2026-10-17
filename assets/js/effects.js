@@ -3,7 +3,7 @@
 //
 // The two only talk through events on document:
 //   stage:focus  { group, index }   a list row is in focus         (this file -> the stage)
-//   stage:hover  { group, index }   a prize bar is under the pointer (the stage -> this file)
+//   stage:hover  { group, index }   a 3D key is under the pointer  (the stage -> this file)
 // group is 'day' (schedule rows) or 'prize' (prize rows); index null means none.
 (() => {
   const root = document.documentElement;
@@ -45,15 +45,16 @@
     row.querySelector('.tl-span').textContent = [hours && `${hours}시간`, minutes && `${minutes}분`].filter(Boolean).join(' ');
   });
   if (rows.length) {
-    schedule.style.setProperty('--schedule-steps', rows.length - 1);
     const hours = `${rows[0].dataset.time} – ${rows[rows.length - 1].dataset.time}`;
     document.querySelectorAll('[data-hours]').forEach(el => { el.textContent = hours; });
   }
 
-  let scrollStep = null;   // no selection outside the visible schedule
-  let lit;
-  let led;
-  // The ink background follows the row selected by scrolling.
+  let scrollStep = 0;     // where the scroll position is in the day
+  let rowStep = null;     // a row under the pointer
+  let stageStep = null;   // a key of the clock's dial under the pointer, reported by the stage
+  let lit = -1;
+  let led = -1;
+  // the ink block behind the lit row slides to it
   function placeMarker() {
     const row = rows[lit];
     if (!timeline || !row) return;
@@ -61,29 +62,35 @@
     timeline.style.setProperty('--h', `${row.offsetHeight}px`);
   }
   function showStep() {
-    const step = scrollStep;
-    if (step !== lit) {
+    const lead = rowStep ?? scrollStep;   // the clock on the stage turns to this one
+    const step = stageStep ?? lead;       // this one is lit
+    if (step !== lit && rows[step]) {
       lit = step;
-      placeMarker();
-      timeline.classList.toggle('is-active', step !== null);
+      placeMarker();   // measured before the rows change
       rows.forEach((row, i) => {
         if (i === step) row.setAttribute('aria-current', 'step');
         else row.removeAttribute('aria-current');
       });
-      if (rows[step]) {
-        if (noteTime) noteTime.textContent = rows[step].dataset.time;
-        if (noteWhat) noteWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
-      }
+      if (noteTime) noteTime.textContent = rows[step].dataset.time;
+      if (noteWhat) noteWhat.textContent = rows[step].querySelector('h3').firstChild.textContent;
     }
-    if (step !== led) {
-      led = step;
-      if (stage) {
-        if (step === null) delete stage.dataset.step;
-        else stage.dataset.step = step;   // the stage starts from here if it loads later
-      }
-      focusStage('day', step);
+    if (lead !== led) {
+      led = lead;
+      if (stage) stage.dataset.step = lead;   // the stage starts from here if it loads later
+      focusStage('day', lead);
     }
   }
+  rows.forEach((row, i) => {
+    row.addEventListener('pointerenter', e => {
+      if (e.pointerType === 'touch') return;   // on touch screens the scroll position leads
+      rowStep = i;
+      showStep();
+    });
+    row.addEventListener('pointerleave', () => {
+      rowStep = null;
+      showStep();
+    });
+  });
 
   // ----- Prizes -----
   const prizeRows = [...document.querySelectorAll('#prize-list .prize-row')];
@@ -114,7 +121,10 @@
 
   document.addEventListener('stage:hover', e => {
     const { group, index } = e.detail;
-    if (group === 'prize') {
+    if (group === 'day') {
+      stageStep = index;
+      showStep();
+    } else if (group === 'prize') {
       prizeRows.forEach((row, i) => row.classList.toggle('is-hot', i === index));
     }
   });
@@ -152,7 +162,7 @@
     if (!start || !rows.length || kstDay(start.date.getTime()) !== kstDay(now)) return;
     const clock = new Date(now + 9 * 3600000);
     const minute = clock.getUTCHours() * 60 + clock.getUTCMinutes();
-    if (minute < startsAt[0] || minute >= startsAt[startsAt.length - 1]) return;
+    if (minute < startsAt[0] || minute >= startsAt[startsAt.length - 1] + 60) return;
     const tag = document.createElement('span');
     tag.className = 'tl-live';
     tag.textContent = '진행 중';
@@ -176,26 +186,22 @@
     // the readable area starts under the top bar
     const shade = topbar ? topbar.offsetHeight : 0;
     // Keep the current mobile scene visible longer before the backdrop changes.
-    const sceneLine = mobileLayout.matches ? 0.35 : 0.45;
+    const sceneLine = mobileLayout.matches ? 0.25 : 0.45;
     const line = shade + (vh - shade) * sceneLine;
 
     let scene = scenes[0];
     scenes.forEach(el => { if (el.getBoundingClientRect().top <= line) scene = el; });
 
-    const timelineBox = timeline && timeline.getBoundingClientRect();
-    const scheduleVisible = scene === schedule && timelineBox && timelineBox.bottom > shade && timelineBox.top < vh;
-    scrollStep = null;
-    if (rows.length && scheduleVisible && pinned) {
-      // Keep the schedule fixed for the full sequence; the final row is selected before the pin releases.
+    if (rows.length && pinned) {
+      // the schedule holds still: the distance scrolled through it picks the row
       const box = schedule.getBoundingClientRect();
       const travel = box.height - vh;
       scrollStep = travel > 1 ? Math.round(clamp(-box.top / travel, 0, 1) * (rows.length - 1)) : 0;
-    } else if (rows.length && scheduleVisible) {
-      // Only visible rows compete for focus; scrolling out of the section clears it entirely.
+    } else if (rows.length) {
+      // the schedule scrolls by: the row nearest the middle of the readable area leads
       let gap = Infinity;
       rows.forEach((row, i) => {
         const box = row.getBoundingClientRect();
-        if (box.bottom <= shade || box.top >= vh) return;
         const away = Math.abs((box.top + box.bottom) / 2 - line);
         if (away < gap) {
           gap = away;
@@ -225,13 +231,7 @@
     requestAnimationFrame(update);
   }
   function layout() {
-    if (pin) {
-      const style = getComputedStyle(pin);
-      const contentHeight = pin.querySelector('.scene-body').offsetHeight;
-      const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-      pinned = !mobileLayout.matches && window.innerHeight >= 700 && contentHeight + padding <= window.innerHeight;
-      schedule.classList.toggle('is-pinned', pinned);
-    }
+    pinned = !!pin && getComputedStyle(pin).position === 'sticky';
     placeMarker();
     requestUpdate();
   }
@@ -239,7 +239,6 @@
   window.addEventListener('resize', layout);
   // the rows change height once the fonts are in
   if (document.fonts) document.fonts.ready.then(layout);
-  if (pin && 'ResizeObserver' in window) new ResizeObserver(layout).observe(pin.querySelector('.scene-body'));
   layout();
   update();
 
