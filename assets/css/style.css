@@ -627,6 +627,174 @@ svg {
   margin: 0 8px;
 }
 
+/* The keys' sound: real keyboards, recorded (sound.js shows this once the board is up). A cap under the board's
+   hint names the one in use and opens the list of them. Wide screens only: on a phone the board is not played by
+   hand */
+.key-sound {
+  display: none;
+  position: relative;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-sound-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.key-sound-now {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.key-cap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--ink);
+  background: #f6f5f1;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  box-shadow: inset 0 -2px 0 rgba(18, 18, 18, 0.07);
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s var(--ease-out), background-color 0.15s, border-color 0.15s,
+    color 0.15s;
+}
+
+.key-sound-chevron {
+  width: 10px;
+  height: 6px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  transition: transform 0.25s var(--ease-out);
+}
+
+.key-sound-now:hover .key-cap,
+.key-sound-list label:hover .key-cap {
+  border-color: var(--ink-3);
+}
+
+/* the cap held down: the list open, and the keyboard in use */
+.key-sound-now[aria-expanded='true'] .key-cap,
+.key-sound-list input:checked + .key-cap {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+  box-shadow: none;
+  transform: translateY(1px);
+}
+
+.key-sound-now[aria-expanded='true'] .key-sound-chevron {
+  transform: rotate(180deg);
+}
+
+.key-sound-now:focus-visible .key-cap,
+.key-sound-list input:focus-visible + .key-cap {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.key-sound-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  display: grid;
+  gap: 2px;
+  width: 340px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 6px;
+  background: #f6f5f1;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(18, 18, 18, 0.12);
+  animation: rise 0.35s var(--ease-out) both;
+}
+
+.key-sound-list[hidden] {
+  display: none;
+}
+
+.key-sound-list label {
+  position: relative;
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.key-sound-list label:hover {
+  background: rgba(18, 18, 18, 0.045);
+}
+
+/* the radio itself stays in the page for the keyboard and screen readers, but out of sight */
+.key-sound-list input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* the kinds of keyboard, over their rows; and off, set apart under them */
+.key-sound-group {
+  margin: 7px 6px 1px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.key-sound-group:first-child {
+  margin-top: 2px;
+}
+
+.key-sound-list .key-sound-off {
+  margin-top: 6px;
+}
+
+.key-sound-what {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+}
+
+.key-sound-source {
+  margin: 6px 6px 2px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.key-sound-source a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* out of the way while the name is in the air (the corner says where to meet, see .stage-note-party) */
+.is-party .key-sound {
+  visibility: hidden;
+}
+
 /* ---------- About ---------- */
 .statement {
   padding-top: 16px;
@@ -685,6 +853,11 @@ svg {
 .facts-aside {
   font-weight: 500;
   color: var(--ink-2);
+}
+
+.facts-requirement {
+  font-size: min(1em, 3.8vw);
+  white-space: nowrap;
 }
 
 .apply {
@@ -873,7 +1046,7 @@ svg {
   font-variant-numeric: tabular-nums;
 }
 
-/* the leading row is set in reverse; one ink block slides to it (effects.js sets --y and --h) */
+/* Scroll selects a row with an ink background and red time (effects.js sets --y and --h). */
 .timeline {
   position: relative;
   isolation: isolate;
@@ -888,8 +1061,13 @@ svg {
   z-index: -1;
   height: var(--h, 0);
   background: var(--ink);
+  opacity: 0;
   transform: translateY(var(--y, 0));
-  transition: transform 0.55s var(--ease-out), height 0.55s var(--ease-out);
+  transition: transform 0.22s var(--ease-out), height 0.22s var(--ease-out), opacity 0.15s ease;
+}
+
+.timeline.is-active::before {
+  opacity: 1;
 }
 
 .tl-row {
@@ -900,7 +1078,7 @@ svg {
   padding: 12px 10px;
   border-bottom: 1px solid var(--rule);
   color: var(--ink-2);
-  transition: color 0.35s var(--ease-out);
+  transition: color 0.2s var(--ease-out);
 }
 
 .tl-row time {
@@ -917,6 +1095,7 @@ svg {
   font-weight: 650;
   line-height: 1.35;
   letter-spacing: -0.01em;
+  word-break: keep-all;
 }
 
 .tl-span {
@@ -1279,6 +1458,10 @@ a.footer-apply:hover ~ .footer-key kbd,
   color: var(--paper);
 }
 
+.footer-organizers {
+  margin-top: 12px;
+}
+
 .footer-links {
   display: flex;
   gap: 20px;
@@ -1299,6 +1482,39 @@ a.footer-apply:hover ~ .footer-key kbd,
 
 .footer-copy {
   font-size: 12px;
+}
+
+/* where the keys' sounds come from: folded away at the foot */
+.footer-credits {
+  margin-top: 28px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(239, 238, 233, 0.5);
+}
+
+.footer-credits summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.footer-credits summary:hover {
+  color: var(--paper);
+}
+
+.footer-credits p {
+  margin-top: 8px;
+}
+
+.footer-credits ul {
+  margin-top: 6px;
+  padding-left: 1.1em;
+  list-style: disc;
+}
+
+.footer-credits a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* ---------- Dock (small screens) ---------- */
@@ -1662,6 +1878,16 @@ a.footer-apply:hover ~ .footer-key kbd,
     justify-content: flex-end;
   }
 
+  /* top right, under the board's hint in the corner (.stage-note: 9vh down, its line 10px further) */
+  .key-sound:not([hidden]) {
+    display: flex;
+    grid-area: 1 / 7 / 2 / 13;
+    align-self: start;
+    justify-self: end;
+    margin-top: calc(9vh + 40px);
+    animation: rise 0.8s var(--ease-out) both;
+  }
+
   .wordmark {
     display: flex;
     justify-content: space-between;
@@ -1717,21 +1943,45 @@ a.footer-apply:hover ~ .footer-key kbd,
   }
 }
 
-/* Tall enough to pin: the schedule holds still while the scroll steps through the day */
-@media (min-width: 1024px) and (min-height: 700px) {
+/* Hold the schedule while all eight entries play; effects.js checks the available room after layout. */
+@media (min-width: 1024px) {
   .scene-steps {
     display: block;
-    height: calc(100vh + 6 * 15vh);
     padding: 0;
   }
 
   .scene-pin {
-    position: sticky;
-    top: 0;
     display: flex;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     padding: calc(var(--bar-h) + 40px) var(--margin) 56px;
+  }
+
+  .scene-steps.is-pinned {
+    height: calc(100vh + var(--schedule-steps, 7) * 15vh);
+  }
+
+  .is-pinned .scene-pin {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+}
+
+/* Keep the complete schedule in view on laptop screens, including main's 700px pinning threshold. */
+@media (min-width: 1024px) and (max-height: 820px) {
+  .scene-pin {
+    padding-top: calc(var(--bar-h) + 16px);
+    padding-bottom: 24px;
+  }
+
+  .scene-pin .chapter-title {
+    font-size: 48px;
+  }
+
+  .scene-pin .milestones,
+  .scene-pin .day-head {
+    margin-top: 24px;
   }
 }
 
